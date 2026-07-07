@@ -1,0 +1,72 @@
+{
+    "id": "resp_bda70f82f0c7c728",
+    "created_at": 1783461190,
+    "incomplete_details": {
+        "reason": "max_output_tokens"
+    },
+    "instructions": null,
+    "metadata": null,
+    "model": "openai/gpt-oss-120b",
+    "object": "response",
+    "output": [
+        {
+            "id": "rs_835524058579f7bd",
+            "summary": [],
+            "type": "reasoning",
+            "content": [
+                {
+                    "text": "The user wants the assistant to \"Say exactly: hello from alcf\". So we need to output exactly that phrase with no extra punctuation. Likely they want \"hello from alcf\". We should output exactly that line. Ensure no extra spaces or newlines? Probably just that line.",
+                    "type": "reasoning_text"
+                }
+            ],
+            "encrypted_content": null,
+            "status": null
+        }
+    ],
+    "parallel_tool_calls": true,
+    "temperature": 1.0,
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1.0,
+    "background": false,
+    "max_output_tokens": 64,
+    "max_tool_calls": null,
+    "previous_response_id": null,
+    "prompt": null,
+    "reasoning": null,
+    "service_tier": "auto",
+    "status": "incomplete",
+    "text": null,
+    "top_logprobs": null,
+    "truncation": "disabled",
+    "usage": {
+        "input_tokens": 74,
+        "input_tokens_details": {
+            "cached_tokens": 64,
+            "input_tokens_per_turn": [
+                74
+            ],
+            "cached_tokens_per_turn": [
+                64
+            ]
+        },
+        "output_tokens": 64,
+        "output_tokens_details": {
+            "reasoning_tokens": 59,
+            "tool_output_tokens": 0,
+            "output_tokens_per_turn": [
+                64
+            ],
+            "tool_output_tokens_per_turn": [
+                0
+            ]
+        },
+        "total_tokens": 138
+    },
+    "user": null,
+    "kv_transfer_params": null,
+    "input_messages": null,
+    "output_messages": null,
+    "response_time": 0.4909534454345703,
+    "throughput_tokens_per_second": 281.08571450771365
+}

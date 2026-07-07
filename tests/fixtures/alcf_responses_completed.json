@@ -1,0 +1,85 @@
+{
+    "id": "resp_a171735e6916c0e0",
+    "created_at": 1783461209,
+    "incomplete_details": null,
+    "instructions": null,
+    "metadata": null,
+    "model": "openai/gpt-oss-120b",
+    "object": "response",
+    "output": [
+        {
+            "id": "rs_bf885aca84d687d7",
+            "summary": [],
+            "type": "reasoning",
+            "content": [
+                {
+                    "text": "User asks: \"Reply with exactly the two words: hello world\". So the response must be exactly \"hello world\". No extra punctuation? Probably just that text. Must ensure no extra characters, no trailing spaces, just \"hello world\".",
+                    "type": "reasoning_text"
+                }
+            ],
+            "encrypted_content": null,
+            "status": null
+        },
+        {
+            "id": "msg_b47a2656f2f82a63",
+            "content": [
+                {
+                    "annotations": [],
+                    "text": "hello world",
+                    "type": "output_text",
+                    "logprobs": null
+                }
+            ],
+            "role": "assistant",
+            "status": "completed",
+            "type": "message",
+            "phase": null
+        }
+    ],
+    "parallel_tool_calls": true,
+    "temperature": 1.0,
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1.0,
+    "background": false,
+    "max_output_tokens": 512,
+    "max_tool_calls": null,
+    "previous_response_id": null,
+    "prompt": null,
+    "reasoning": null,
+    "service_tier": "auto",
+    "status": "completed",
+    "text": null,
+    "top_logprobs": null,
+    "truncation": "disabled",
+    "usage": {
+        "input_tokens": 76,
+        "input_tokens_details": {
+            "cached_tokens": 64,
+            "input_tokens_per_turn": [
+                76
+            ],
+            "cached_tokens_per_turn": [
+                64
+            ]
+        },
+        "output_tokens": 60,
+        "output_tokens_details": {
+            "reasoning_tokens": 49,
+            "tool_output_tokens": 0,
+            "output_tokens_per_turn": [
+                60
+            ],
+            "tool_output_tokens_per_turn": [
+                0
+            ]
+        },
+        "total_tokens": 136
+    },
+    "user": null,
+    "kv_transfer_params": null,
+    "input_messages": null,
+    "output_messages": null,
+    "response_time": 0.4061005115509033,
+    "throughput_tokens_per_second": 334.89246167313155
+}
