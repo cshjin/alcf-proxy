@@ -1,0 +1,16 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "instructions": "You are a coding agent.",
+  "input": [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": "hi"}]}],
+  "tools": [
+    {"type": "function", "name": "exec_command", "parameters": {"type": "object", "properties": {}}},
+    {"type": "function", "name": "update_plan", "parameters": {"type": "object", "properties": {}}},
+    {"type": "namespace", "name": "multi_agent_v1"},
+    {"type": "function", "name": "create_goal", "parameters": {"type": "object", "properties": {}}},
+    {"type": "web_search"}
+  ],
+  "tool_choice": "auto",
+  "parallel_tool_calls": false,
+  "stream": true,
+  "store": false
+}
