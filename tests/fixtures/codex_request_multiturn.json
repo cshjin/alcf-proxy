@@ -1,0 +1,10 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "input": [
+    {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": "sys"}]},
+    {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "hi"}]},
+    {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "hello"}]},
+    {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "now say world"}]}
+  ],
+  "stream": true
+}

@@ -18,12 +18,36 @@ from . import sse
 _SUPPORTED_TOOL_TYPES = {"function"}
 
 
+def _flatten_assistant_content(item: dict) -> dict:
+    """Flatten an assistant message's content to a plain string.
+
+    On multi-turn conversations codex echoes the prior assistant reply as a message
+    with content = [{"type": "output_text", "text": ...}, ...]. ALCF's vLLM validator
+    rejects that shape for assistant messages ("Input should be a valid string"), so
+    we collapse it to the concatenated text. User/developer messages are left as-is.
+    """
+    if item.get("role") != "assistant":
+        return item
+    content = item.get("content")
+    if isinstance(content, list):
+        text = "".join(
+            part.get("text", "")
+            for part in content
+            if isinstance(part, dict) and part.get("type") in ("output_text", "input_text", "text")
+        )
+        item = dict(item)
+        item["content"] = text
+    return item
+
+
 def sanitize_request_body(body: dict) -> dict:
     """Return a copy of the request body safe for ALCF's vLLM responses endpoint.
 
     - forces stream=False (ALCF rejects streaming)
     - keeps only tools of a vLLM-supported type; if none remain, drops the tools
       key and tool_choice entirely (an empty tools list with tool_choice errors)
+    - flattens echoed assistant message content (list of output_text parts) to a
+      plain string, which is what vLLM's responses input validator expects
     """
     out = dict(body)
     out["stream"] = False
@@ -35,6 +59,12 @@ def sanitize_request_body(body: dict) -> dict:
         else:
             out.pop("tools", None)
             out.pop("tool_choice", None)
+    inp = out.get("input")
+    if isinstance(inp, list):
+        out["input"] = [
+            _flatten_assistant_content(it) if isinstance(it, dict) else it
+            for it in inp
+        ]
     return out
 
 
