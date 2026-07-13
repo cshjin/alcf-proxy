@@ -1,4 +1,9 @@
-# alcf-proxy
+# ALCF-proxy
+
+[![PyPI version](https://img.shields.io/pypi/v/alcf-proxy?color=green)](https://pypi.org/project/alcf-proxy/)
+[![Python versions](https://img.shields.io/pypi/pyversions/alcf-proxy)](https://pypi.org/project/alcf-proxy/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Coverage](https://img.shields.io/badge/coverage-88%25-green.svg)](#tests)
 
 A standalone, cross-platform **translating gateway** for [ALCF inference
 endpoints](https://docs.alcf.anl.gov/services/inference-endpoints/). Run one local proxy and point
@@ -34,17 +39,23 @@ Bearer-authenticated gateway (not ANL ARGO), and the proxy manages ALCF's rotati
 ## Install
 
 ```bash
-# from source (this repo)
-pip install .
-# or editable, for development
-pip install -e .
+pip install alcf-proxy
 ```
 
 Or run without installing, using [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uvx --from . alcf-proxy serve        # one-shot from a checkout
-uvx alcf-proxy serve                 # after PyPI registration
+uvx alcf-proxy serve
+```
+
+### From source (development)
+
+```bash
+git clone https://github.com/cshjin/alcf-proxy
+cd alcf-proxy
+pip install -e .              # editable install
+# or: pip install -e ".[dev]"  # with test/build tooling
+uvx --from . alcf-proxy serve  # one-shot run from a checkout
 ```
 
 ### Platform notes
