@@ -75,3 +75,20 @@ def test_models_route(client, monkeypatch):
     r = c.get("/v1/models")
     assert r.status_code == 200
     assert "gpt-oss-120b" in r.text
+
+
+def test_all_endpoints_down_returns_502_not_broken_200(monkeypatch, fixtures_dir):
+    # C3 regression: if upstream is unavailable, the client must get a clean 502, not a 200 with
+    # an empty/silent body (which happens if the failure is raised inside the stream generator).
+    cfg = config.Config({"cluster": "sophia", "framework": "vllm"})
+
+    def boom(self, body, token):
+        raise __import__("alcf_proxy.upstream", fromlist=["UpstreamError"]).UpstreamError("all down")
+    monkeypatch.setattr("alcf_proxy.server.upstream.EndpointSelector.stream_chat", boom)
+    app = server.build_app(cfg, FakeTM())
+    c = TestClient(app)
+    r = c.post("/v1/responses", json={"model": "m",
+               "input": [{"type": "message", "role": "user",
+                          "content": [{"type": "input_text", "text": "hi"}]}], "stream": True})
+    assert r.status_code == 502
+    assert "down" in r.text.lower() or "error" in r.text.lower()

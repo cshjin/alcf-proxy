@@ -26,7 +26,10 @@ class TokenManager:
 
     def _run(self, subcmd: list[str]) -> str:
         cmd = [sys.executable, config.auth_script_path(), *subcmd]
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        except subprocess.TimeoutExpired as e:
+            raise AuthError(f"ALCF auth script timed out after 60s: {' '.join(cmd)}") from e
         if proc.returncode != 0:
             raise AuthError(
                 "ALCF auth failed. If your login expired, run:\n"

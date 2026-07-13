@@ -43,3 +43,25 @@ def test_stream_chat_to_anthropic(fixtures_dir):
     types = [e.get("type") for e in events]
     assert types[0] == "message_start"
     assert "content_block_delta" in types
+
+
+def test_stream_chat_to_chat_passthrough(fixtures_dir):
+    # C1 regression: chat frontend must forward real content (chat chunks have no "type" key).
+    chunks = _chat_chunks(fixtures_dir)
+    events = list(translate.stream_to_frontend("chat", iter(chunks)))
+    assert events, "chat frontend produced no events"
+    assert "hello world" in "".join(str(e) for e in events)
+
+
+def test_responses_stream_has_terminal(fixtures_dir):
+    # C2 regression: must end with response.completed even when finish_reason rides the last
+    # content chunk (real ALCF shape) and the converter emits no stream_end on its own.
+    chunks = _chat_chunks(fixtures_dir)
+    types = [e.get("type") for e in translate.stream_to_frontend("responses", iter(chunks))]
+    assert types[-1] == "response.completed"
+
+
+def test_anthropic_stream_has_terminal(fixtures_dir):
+    chunks = _chat_chunks(fixtures_dir)
+    types = [e.get("type") for e in translate.stream_to_frontend("anthropic", iter(chunks))]
+    assert "message_stop" in types

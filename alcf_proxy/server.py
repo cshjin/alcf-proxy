@@ -7,6 +7,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from . import endpoints, sse, translate, upstream
 from .formats import FORMATS
 
+_SENTINEL = object()
+
 
 def build_app(cfg, token_manager) -> FastAPI:
     app = FastAPI()
@@ -16,13 +18,26 @@ def build_app(cfg, token_manager) -> FastAPI:
 
     def _make_route(path: str, spec):
         async def route(request: Request):
-            body = await request.json()
+            try:
+                body = await request.json()
+            except Exception:  # noqa: BLE001
+                return JSONResponse(status_code=400, content={"error": "invalid JSON body"})
             chat_body = spec.sanitize(translate.to_chat_request(spec.name, body))
             token = token_manager.get_valid_token()
 
-            def gen():
+            # Probe the upstream BEFORE returning a StreamingResponse: an UpstreamError (e.g. all
+            # endpoints down) must surface as a clean 502, not a broken 200 whose body silently
+            # errors after headers are already committed.
+            try:
                 chunks = selector.stream_chat(chat_body, token)
-                for payload in translate.stream_to_frontend(spec.name, chunks):
+                first = next(chunks, _SENTINEL)
+            except upstream.UpstreamError as e:
+                return JSONResponse(status_code=502, content={"error": str(e)})
+
+            def gen():
+                buffered = () if first is _SENTINEL else (first,)
+                import itertools
+                for payload in translate.stream_to_frontend(spec.name, itertools.chain(buffered, chunks)):
                     yield sse.sse_frame(payload)
                 yield sse.sse_done()
             return StreamingResponse(gen(), media_type="text/event-stream")

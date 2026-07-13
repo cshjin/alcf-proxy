@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 import uvicorn
@@ -40,6 +41,13 @@ def main(argv: list[str] | None = None) -> int:
     if ns.command == "serve":
         overrides = {k: getattr(ns, k) for k in ("host", "port", "cluster", "framework", "default_model")}
         cfg = config.load_config(cli_overrides=overrides, path=ns.config)
+        # Security: the proxy injects the real ALCF token for every caller. Binding to a non-loopback
+        # host would expose that token to the network, so refuse unless an inbound API key is set.
+        if not _is_loopback(cfg.host) and not os.environ.get("ALCF_PROXY_API_KEY"):
+            print(f"alcf-proxy: refusing to bind non-loopback host {cfg.host!r} without an inbound "
+                  "API key. Set ALCF_PROXY_API_KEY to allow this, or bind to 127.0.0.1.",
+                  file=sys.stderr)
+            return 1
         tm = auth.TokenManager()
         try:
             tm.get_valid_token()
@@ -87,3 +95,7 @@ def main(argv: list[str] | None = None) -> int:
 def yaml_dump(d: dict) -> str:
     import yaml
     return yaml.safe_dump(d, sort_keys=False)
+
+
+def _is_loopback(host: str) -> bool:
+    return host in ("127.0.0.1", "::1", "localhost")
