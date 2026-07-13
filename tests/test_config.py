@@ -1,23 +1,52 @@
+import os
+import yaml
 from alcf_proxy import config
 
 
-def test_defaults():
-    assert config.DEFAULT_MODEL == "openai/gpt-oss-120b"
-    assert config.DEFAULT_PROXY_PORT == 11445
-    assert config.PROVIDER_NAME == "alcf_proxy"
+def test_defaults_when_no_file(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(config, "config_search_paths", lambda: [str(tmp_path / "none.yaml")])
+    cfg = config.load_config()
+    assert cfg.host == "127.0.0.1"
+    assert cfg.port == 11445
+    assert cfg.cluster == "sophia"
+    assert cfg.default_model == "openai/gpt-oss-120b"
+
+
+def test_yaml_overrides_defaults(tmp_path, monkeypatch):
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.safe_dump({"port": 8080, "cluster": "metis", "framework": "api"}))
+    monkeypatch.setattr(config, "config_search_paths", lambda: [str(p)])
+    cfg = config.load_config()
+    assert cfg.port == 8080
+    assert cfg.cluster == "metis"
+    assert cfg.framework == "api"
+    assert cfg.host == "127.0.0.1"
+
+
+def test_env_overrides_yaml(tmp_path, monkeypatch):
+    p = tmp_path / "config.yaml"
+    p.write_text(yaml.safe_dump({"port": 8080}))
+    monkeypatch.setattr(config, "config_search_paths", lambda: [str(p)])
+    monkeypatch.setenv("ALCF_PROXY_PORT", "9090")
+    cfg = config.load_config()
+    assert cfg.port == 9090
+
+
+def test_cli_overrides_all(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "config_search_paths", lambda: [])
+    monkeypatch.setenv("ALCF_PROXY_PORT", "9090")
+    cfg = config.load_config(cli_overrides={"port": 7070})
+    assert cfg.port == 7070
+
+
+def test_init_config_writes_yaml(tmp_path):
+    p = tmp_path / "sub" / "config.yaml"
+    config.init_config(str(p), {"port": 1234})
+    loaded = yaml.safe_load(p.read_text())
+    assert loaded["port"] == 1234
 
 
 def test_auth_script_env_override(monkeypatch):
-    monkeypatch.setenv("ALCF_AUTH_SCRIPT", "/tmp/foo.py")
-    assert config.auth_script_path() == "/tmp/foo.py"
-
-
-def test_codex_home_prefers_env(monkeypatch):
-    monkeypatch.setenv("CODEX_HOME", "/tmp/ch")
-    assert config.codex_home() == "/tmp/ch"
-
-
-def test_codex_home_scratch_fallback(monkeypatch):
-    monkeypatch.delenv("CODEX_HOME", raising=False)
-    monkeypatch.setenv("SCRATCH", "/tmp/scr")
-    assert config.codex_home() == "/tmp/scr/.codex"
+    monkeypatch.setenv("ALCF_PROXY_AUTH_SCRIPT", "/tmp/x.py")
+    assert config.auth_script_path() == "/tmp/x.py"

@@ -1,11 +1,14 @@
-"""ALCF token management via inference_auth_token.py.
+"""In-process ALCF token manager: fetch via inference_auth_token.py, refresh near expiry.
 
-Runs the auth script with the CURRENT interpreter (sys.executable), because only the environment
-alcf-run is installed in has globus_sdk (see _hj verified facts, FACT 1). A bare "python3" would
-resolve to a system interpreter without globus_sdk.
+The auth script imports globus_sdk, which is only present in the interpreter alcf-proxy runs under,
+so we invoke it with sys.executable (never a bare 'python3').
 """
+from __future__ import annotations
+
 import subprocess
 import sys
+import threading
+import time
 
 from . import config
 
@@ -14,33 +17,42 @@ class AuthError(Exception):
     pass
 
 
-_GUIDANCE = (
-    "Failed to obtain an ALCF token. If your login expired, run:\n"
-    "  {py} {script} authenticate"
-)
+class TokenManager:
+    def __init__(self, refresh_margin_s: int = 300):
+        self._margin = refresh_margin_s
+        self._token: str | None = None
+        self._expiry_epoch: float = 0.0
+        self._lock = threading.Lock()
 
+    def _run(self, subcmd: list[str]) -> str:
+        cmd = [sys.executable, config.auth_script_path(), *subcmd]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise AuthError(
+                "ALCF auth failed. If your login expired, run:\n"
+                f"  {sys.executable} {config.auth_script_path()} authenticate\n"
+                f"--- stderr ---\n{proc.stderr.strip()}"
+            )
+        return proc.stdout.strip()
 
-def _run(subcmd: list[str]) -> str:
-    cmd = [sys.executable, config.auth_script_path(), *subcmd]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise AuthError(
-            _GUIDANCE.format(py=sys.executable, script=config.auth_script_path())
-            + f"\n--- stderr ---\n{proc.stderr.strip()}"
-        )
-    return proc.stdout.strip()
+    def _fetch(self) -> str:
+        tok = self._run(["get_access_token"])
+        if not tok:
+            raise AuthError("Auth script returned an empty token.")
+        hrs = self.hours_left()
+        self._token = tok
+        self._expiry_epoch = time.time() + (hrs * 3600 if hrs is not None else 0)
+        return tok
 
+    def get_valid_token(self) -> str:
+        with self._lock:
+            if self._token is None or (self._expiry_epoch - time.time()) < self._margin:
+                return self._fetch()
+            return self._token
 
-def get_token() -> str:
-    tok = _run(["get_access_token"])
-    if not tok:
-        raise AuthError("Auth script returned an empty token.")
-    return tok
-
-
-def token_hours_left() -> float | None:
-    try:
-        out = _run(["get_time_until_token_expiration", "--units", "hours"])
-        return float(out.split()[0])
-    except (AuthError, ValueError, IndexError):
-        return None
+    def hours_left(self) -> float | None:
+        try:
+            out = self._run(["get_time_until_token_expiration", "--units", "hours"])
+            return float(out.split()[0])
+        except (AuthError, ValueError, IndexError):
+            return None
