@@ -50,3 +50,32 @@ def test_init_config_writes_yaml(tmp_path):
 def test_auth_script_env_override(monkeypatch):
     monkeypatch.setenv("ALCF_PROXY_AUTH_SCRIPT", "/tmp/x.py")
     assert config.auth_script_path() == "/tmp/x.py"
+
+
+def test_endpoints_synthesized_from_primary_plus_defaults():
+    cfg = config.Config({"cluster": "sophia", "framework": "vllm",
+                         "default_model": "openai/gpt-oss-120b"})
+    eps = cfg.endpoints()
+    assert eps[0] == {"cluster": "sophia", "framework": "vllm", "model": "openai/gpt-oss-120b"}
+    # metis fallback present, model name without openai/ prefix
+    assert any(e["cluster"] == "metis" and e["model"] == "gpt-oss-120b" for e in eps)
+
+
+def test_endpoints_primary_not_duplicated_in_defaults():
+    # if primary IS the metis default, it must appear once (as primary)
+    cfg = config.Config({"cluster": "metis", "framework": "api", "default_model": "gpt-oss-120b"})
+    eps = cfg.endpoints()
+    metis = [e for e in eps if e["cluster"] == "metis" and e["framework"] == "api"]
+    assert len(metis) == 1
+    assert eps[0]["cluster"] == "metis"
+
+
+def test_endpoints_explicit_list_used_verbatim():
+    cfg = config.Config({"endpoints": [
+        {"cluster": "metis", "framework": "api", "model": "gpt-oss-120b"},
+        {"cluster": "sophia", "framework": "vllm", "model": "openai/gpt-oss-120b"},
+    ]})
+    eps = cfg.endpoints()
+    assert len(eps) == 2
+    assert eps[0]["cluster"] == "metis"
+    assert eps[1]["cluster"] == "sophia"

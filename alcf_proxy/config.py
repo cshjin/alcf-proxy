@@ -18,6 +18,13 @@ _ENV_PREFIX = "ALCF_PROXY_"
 _INT_KEYS = {"port"}
 _BOOL_KEYS = {"verbose"}
 
+# Built-in fallback chain, tried in order when a cluster is down (503/maintenance).
+# Model ids differ per endpoint (sophia/vllm uses the openai/ prefix; metis/api does not).
+DEFAULT_ENDPOINTS = [
+    {"cluster": "sophia", "framework": "vllm", "model": "openai/gpt-oss-120b"},
+    {"cluster": "metis", "framework": "api", "model": "gpt-oss-120b"},
+]
+
 
 class Config:
     def __init__(self, values: dict):
@@ -36,6 +43,27 @@ class Config:
     @property
     def auth_script(self) -> str:
         return auth_script_path()
+
+    def endpoints(self) -> list[dict]:
+        """Ordered list of {cluster, framework, model} to try, primary first.
+
+        If an explicit `endpoints` list is configured, use it verbatim. Otherwise synthesize the
+        primary from cluster/framework/default_model and append the built-in fallback chain
+        (deduplicated on cluster/framework so the primary is not repeated).
+        """
+        explicit = self._v.get("endpoints")
+        if explicit:
+            return [dict(e) for e in explicit]
+        primary = {
+            "cluster": self._v["cluster"],
+            "framework": self._v["framework"],
+            "model": self._v["default_model"],
+        }
+        result = [primary]
+        for ep in DEFAULT_ENDPOINTS:
+            if (ep["cluster"], ep["framework"]) != (primary["cluster"], primary["framework"]):
+                result.append(dict(ep))
+        return result
 
 
 def config_search_paths() -> list[str]:

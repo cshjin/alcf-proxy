@@ -18,11 +18,13 @@ def client(monkeypatch, fixtures_dir):
         if d:
             chunks.append(d)
     captured = {}
-    def fake_stream_chat(body, token, cluster, framework, **kw):
+
+    # patch EndpointSelector.stream_chat (the server drives failover through the selector)
+    def fake_sel_stream(self, body, token):
         captured["body"] = body
         captured["token"] = token
         return iter(chunks)
-    monkeypatch.setattr("alcf_proxy.server.upstream.stream_chat", fake_stream_chat)
+    monkeypatch.setattr("alcf_proxy.server.upstream.EndpointSelector.stream_chat", fake_sel_stream)
     app = server.build_app(cfg, FakeTM())
     return TestClient(app), captured
 
@@ -33,6 +35,14 @@ def test_health(client):
     assert j["status"] in ("ok", "degraded")
     assert j["cluster"] == "sophia"
     assert j["token_hours_left"] == 40.0
+
+
+def test_health_reports_endpoints(client):
+    c, _ = client
+    j = c.get("/health").json()
+    assert "active_endpoint" in j
+    assert j["active_endpoint"]["cluster"] == "sophia"
+    assert isinstance(j["endpoints"], list) and len(j["endpoints"]) >= 1
 
 
 def test_responses_route_streams_and_injects_token(client):

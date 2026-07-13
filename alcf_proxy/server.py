@@ -10,6 +10,9 @@ from .formats import FORMATS
 
 def build_app(cfg, token_manager) -> FastAPI:
     app = FastAPI()
+    # One selector shared across requests: it stays sticky on a working endpoint and fails over
+    # to the next configured endpoint when a cluster goes down (503/maintenance).
+    selector = upstream.EndpointSelector(cfg.endpoints())
 
     def _make_route(path: str, spec):
         async def route(request: Request):
@@ -18,7 +21,7 @@ def build_app(cfg, token_manager) -> FastAPI:
             token = token_manager.get_valid_token()
 
             def gen():
-                chunks = upstream.stream_chat(chat_body, token, cfg.cluster, cfg.framework)
+                chunks = selector.stream_chat(chat_body, token)
                 for payload in translate.stream_to_frontend(spec.name, chunks):
                     yield sse.sse_frame(payload)
                 yield sse.sse_done()
@@ -41,7 +44,15 @@ def build_app(cfg, token_manager) -> FastAPI:
         status = "ok"
         if hrs is not None and hrs < 0.1:
             status = "degraded"
-        return {"status": status, "upstream": "unknown",
-                "token_hours_left": hrs, "cluster": cfg.cluster, "framework": cfg.framework}
+        active = selector.active()
+        return {
+            "status": status,
+            "upstream": "unknown",
+            "token_hours_left": hrs,
+            "cluster": active["cluster"],
+            "framework": active["framework"],
+            "active_endpoint": active,
+            "endpoints": cfg.endpoints(),
+        }
 
     return app
