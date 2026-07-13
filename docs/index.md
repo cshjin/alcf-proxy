@@ -1,4 +1,4 @@
-# alcf-proxy
+# ALCF-proxy
 
 [![PyPI version](https://img.shields.io/pypi/v/alcf-proxy?color=green)](https://pypi.org/project/alcf-proxy/)
 [![Python versions](https://img.shields.io/pypi/pyversions/alcf-proxy)](https://pypi.org/project/alcf-proxy/)
