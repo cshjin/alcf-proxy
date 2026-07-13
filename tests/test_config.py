@@ -1,4 +1,4 @@
-from alcf_run import config
+from alcf_proxy import config
 
 
 def test_defaults():

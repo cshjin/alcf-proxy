@@ -1,5 +1,5 @@
 import json
-from alcf_run import endpoints
+from alcf_proxy import endpoints
 
 
 def test_responses_url():

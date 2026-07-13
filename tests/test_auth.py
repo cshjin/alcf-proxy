@@ -1,6 +1,6 @@
 import subprocess
 import pytest
-from alcf_run import auth
+from alcf_proxy import auth
 
 
 def test_get_token_uses_sys_executable(monkeypatch):

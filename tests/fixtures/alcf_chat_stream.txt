@@ -1,0 +1,10 @@
+data: {"choices":[{"delta":{"channel":"analysis","reasoning":"The user says: \"say exactly: hello world\". So they want the assistant to output exactly \"hello world\". Probably just that phrase. No extra punctuation or formatting. So respond with exactly"},"finish_reason":null,"index":0,"logprobs":null}],"created":1783952747,"id":"32b89659-b9af-4d2e-8fbc-d84fa859e1cd","model":"gpt-oss-120b","object":"chat.completion.chunk","system_fingerprint":"fastcoe"}
+
+data: {"choices":[{"delta":{"channel":"analysis","reasoning":" \"hello world\"."},"finish_reason":null,"index":0,"logprobs":null}],"created":1783952747,"id":"32b89659-b9af-4d2e-8fbc-d84fa859e1cd","model":"gpt-oss-120b","object":"chat.completion.chunk","system_fingerprint":"fastcoe"}
+
+data: {"choices":[{"delta":{"content":"hello world","role":"assistant"},"finish_reason":null,"index":0,"logprobs":null}],"created":1783952747,"id":"32b89659-b9af-4d2e-8fbc-d84fa859e1cd","model":"gpt-oss-120b","object":"chat.completion.chunk","system_fingerprint":"fastcoe"}
+
+data: {"choices":[{"delta":{"content":""},"finish_reason":"stop","index":0,"logprobs":null}],"created":1783952747,"id":"32b89659-b9af-4d2e-8fbc-d84fa859e1cd","model":"gpt-oss-120b","object":"chat.completion.chunk","system_fingerprint":"fastcoe"}
+
+data: [DONE]
+
