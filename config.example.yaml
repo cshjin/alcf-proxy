@@ -1,0 +1,23 @@
+# alcf-proxy configuration (YAML).
+# Search order: ./config.yaml, then the platform user-config dir
+#   (~/.config/alcf-proxy/config.yaml on Linux, %APPDATA%\alcf-proxy on Windows,
+#    ~/Library/Application Support/alcf-proxy on macOS).
+# Precedence: CLI flags > env (ALCF_PROXY_*) > this file > built-in defaults.
+
+host: 127.0.0.1
+port: 11445                 # avoid argo's 11444
+cluster: sophia            # primary cluster
+framework: vllm            # primary framework
+default_model: openai/gpt-oss-120b
+verbose: false
+
+# Optional: path to ALCF's Globus auth script (default ~/inference_auth_token.py).
+# auth_script: ~/inference_auth_token.py
+
+# Optional: explicit ordered failover list. If omitted, alcf-proxy synthesizes the primary
+# (cluster/framework/default_model above) followed by a built-in fallback chain. When a cluster
+# returns 503/maintenance, the proxy advances to the next endpoint and sticks to the one that works.
+# NOTE: the model id differs per endpoint (sophia/vllm uses the openai/ prefix; metis/api does not).
+# endpoints:
+#   - {cluster: sophia, framework: vllm, model: openai/gpt-oss-120b}
+#   - {cluster: metis,  framework: api,  model: gpt-oss-120b}

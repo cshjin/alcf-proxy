@@ -1,93 +1,137 @@
-# alcf-run
+# alcf-proxy
 
-Unified CLI to launch agentic frameworks against **ALCF inference endpoints**, with shared ALCF
-token handling. Currently implements the `codex` framework end-to-end; other frameworks
-(`claude`, `opencode`, …) are planned.
+A standalone, cross-platform **translating gateway** for [ALCF inference
+endpoints](https://docs.alcf.anl.gov/services/inference-endpoints/). Run one local proxy and point
+any OpenAI- or Anthropic-style coding CLI at it — Codex, Claude Code, Aider, OpenCode, and more —
+without each tool needing to know about ALCF's auth or wire format.
 
-## Why this exists
+Inspired by [argo-proxy](https://github.com/Oaklight/argo-proxy), but the upstream is ALCF's public
+Bearer-authenticated gateway (not ANL ARGO), and the proxy manages ALCF's rotating token for you.
 
-ALCF's inference gateway is OpenAI-compatible and natively supports the Responses API, **but rejects
-streaming** (`stream:true`). Codex ≥0.142 always streams and has no way to disable it. `alcf-run`
-bridges the gap with a tiny local proxy: it accepts codex's streaming request, forwards it to ALCF as
-`stream:false` (injecting a fresh ALCF token), and re-wraps the complete reply as the SSE event
-stream codex expects.
+## What it does
 
-The existing **argo** setup (`localhost:11444`, the default codex provider) is never touched —
-`alcf-run` only adds an `alcf_proxy` provider and manages its own profile file.
+- **Speaks 3 client formats** on one instance:
+  - `/v1/chat/completions` — OpenAI SDK, Aider, OpenCode
+  - `/v1/responses` — Codex CLI
+  - `/v1/messages` — Claude Code
+- **Translates** every request to ALCF's streaming `chat/completions` upstream via
+  [llm-rosetta](https://github.com/Oaklight/llm-rosetta), and translates the streamed reply back to
+  the client's format — real token-by-token streaming.
+- **Manages the ALCF token**: fetches it via ALCF's Globus auth script, injects it as a Bearer
+  header, and refreshes automatically when it nears its ~48h expiry. Clients just use a dummy key.
+- **Endpoint auto-failover**: if a cluster returns 503 / is under maintenance, the proxy advances to
+  the next configured endpoint (remapping the per-endpoint model id) and sticks to the one that works.
+
+## Prerequisites
+
+- **Python ≥ 3.10.**
+- **ALCF's `inference_auth_token.py`** on your machine, and the interpreter you run alcf-proxy with
+  must have `globus_sdk` installed (that's what the auth script imports). First-time login:
+  `python ~/inference_auth_token.py authenticate` (opens a browser for Globus OAuth).
 
 ## Install
 
 ```bash
-# In the target environment (must have globus_sdk for the ALCF auth script):
+# from source (this repo)
+pip install .
+# or editable, for development
 pip install -e .
 ```
 
-Requires Python ≥3.10. Dependencies: fastapi, uvicorn, httpx, llm-rosetta[openai], tomli-w.
+Or run without installing, using [uv](https://docs.astral.sh/uv/):
 
-On Perlmutter the dev environment is `/pscratch/sd/j/jinh/envs/hack`.
+```bash
+uvx --from . alcf-proxy serve        # one-shot from a checkout
+uvx alcf-proxy serve                 # after PyPI registration
+```
+
+### Platform notes
+
+- **Linux / macOS / Windows** are all supported (pure Python; config paths resolved via
+  `platformdirs`). Config lives at `~/.config/alcf-proxy/config.yaml` (Linux),
+  `~/Library/Application Support/alcf-proxy/config.yaml` (macOS), or
+  `%APPDATA%\alcf-proxy\config.yaml` (Windows).
+- On **Windows**, ensure `globus_sdk` is installed in the same environment and complete the
+  browser-based `authenticate` step once.
 
 ## Usage
 
 ```bash
-alcf-run codex                          # start proxy, launch codex on openai/gpt-oss-120b
-alcf-run codex --profile alcf-llama70b  # extra args are passed through to codex
-alcf-run codex "explain this repo"      # positional args passed through too
-alcf-run models                         # list models currently served by ALCF
-alcf-run auth                           # show ALCF token status / hours remaining
-alcf-run claude                         # (not yet implemented)
+alcf-proxy serve                          # start the gateway (reads config or uses defaults)
+alcf-proxy serve --port 8080 --host 0.0.0.0
+alcf-proxy serve --cluster metis --framework api --model gpt-oss-120b
+alcf-proxy models                         # list models currently served by ALCF
+alcf-proxy models --json                  # machine-readable
+alcf-proxy health                         # token status / hours remaining
+alcf-proxy config init                    # write a starter config file
+alcf-proxy config show                    # print the effective config
 ```
 
-`alcf-run codex` starts an ephemeral proxy on `localhost:11445` (falls back to a free port if
-taken), points a managed `alcf_proxy` codex provider at it, runs codex, and tears the proxy down on
-exit. Nothing is left running afterwards.
+### Point your CLI at it
+
+Codex (`~/.codex/config.toml` or `$CODEX_HOME/config.toml`):
+
+```toml
+[model_providers.alcf]
+name = "ALCF (via alcf-proxy)"
+base_url = "http://localhost:11445/v1"
+wire_api = "responses"
+# no api key needed — the proxy injects the real ALCF token; set a dummy if the client requires one
+```
+
+Any OpenAI-compatible client (Aider, OpenCode, OpenAI SDK): set the base URL to
+`http://localhost:11445/v1` and any non-empty API key.
+
+Claude Code: set the Anthropic base URL to `http://localhost:11445` and any dummy key.
+
+## Configuration
+
+YAML file (search order: `./config.yaml`, then the platform user-config dir). CLI flags and
+`ALCF_PROXY_*` env vars override the file. See [`config.example.yaml`](config.example.yaml) for all
+options, including the optional explicit `endpoints:` failover list.
+
+Precedence: **CLI flags > env (`ALCF_PROXY_*`) > config file > built-in defaults.**
 
 ## How it works
 
 ```
-alcf-run codex
-  ├─ auth.get_token()            # fresh ALCF token via inference_auth_token.py (uses sys.executable)
-  ├─ ProxyManager.start()        # uvicorn on localhost:11445
-  │    POST /v1/responses:
-  │      force stream=false + inject Bearer token → ALCF /v1/responses (503 cold-start retry)
-  │      complete JSON → rebuild responses SSE events (llm-rosetta) → return to codex
-  ├─ ensure_provider_config()    # add-only [model_providers.alcf_proxy] in $CODEX_HOME/config.toml
-  │                              #   + separate alcf-gpt-oss-120b.config.toml profile (codex ≥0.142)
-  ├─ exec codex --profile alcf-gpt-oss-120b
-  └─ ProxyManager.stop()
+client (chat / responses / messages)
+      │  request
+      ▼
+  alcf-proxy  ──translate(req)──►  IR  ──►  ALCF chat/completions (stream:true) + Bearer(auto)
+      ▲                                            │  real streamed chat chunks
+      │  client-format SSE  ◄──translate(stream)── IR ◄──
+      │
+      └─ EndpointSelector: on 503/maintenance, fail over to the next endpoint (sticky)
 ```
 
-### argo safety
-
-- The codex config merge is **add-only**: top-level `model`/`model_provider`, `[model_providers.argo]`,
-  and `[projects.*]` are left byte-for-byte intact. The existing config is backed up to
-  `config.toml.alcf-run.bak` before any write, and the merge is idempotent.
-- The ALCF token lives only in the proxy process memory (injected per request); it is never written
-  to the codex config or any file.
+The ALCF token lives only in the proxy process memory; it is never written to any client config.
 
 ## Layout
 
 ```
-alcf_run/
-  cli.py              # unified dispatcher
-  config.py           # constants + env resolution (CODEX_HOME, auth script path)
-  auth.py             # ALCF token via inference_auth_token.py
-  endpoints.py        # ALCF URL builder + model list
-  proxy/
-    server.py         # FastAPI: stream→non-stream bridge + token injection
-    sse.py            # rebuild complete JSON into responses SSE events (llm-rosetta)
-    manager.py        # ephemeral proxy lifecycle
-  frameworks/
-    base.py           # Framework interface
-    codex.py          # config merge + launch
+alcf_proxy/
+  cli.py                 # serve / models / health / config
+  config.py              # YAML + env + CLI config; endpoint failover list
+  auth.py                # TokenManager: fetch + refresh-on-expiry (via sys.executable)
+  endpoints.py           # ALCF URLs + model listing
+  upstream.py            # chat streaming client + EndpointSelector (failover)
+  translate.py           # llm-rosetta engine: frontend <-> IR <-> chat
+  sse.py                 # SSE codec
+  server.py              # FastAPI: 3 translating routes + /v1/models + /health
+  formats/               # registry (chat/responses/anthropic) + chat sanitizers
 ```
 
 ## Tests
 
 ```bash
-python -m pytest              # unit tests (offline, use captured fixtures)
-python tests/manual_live_proxy.py    # live end-to-end proxy smoke (needs a valid ALCF token)
-ALCF_RUN_LIVE=1 python -m pytest     # also run the proxy manager live smoke
+python -m pytest                          # unit tests (offline); enforces coverage ≥85%
+python -m pytest -m live -o addopts=""    # live end-to-end tests (need a valid ALCF token + up cluster)
 ```
 
-Unit tests use real ALCF response fixtures under `tests/fixtures/` (captured once; contain only model
-output, no secrets).
+Unit tests use real ALCF response fixtures under `tests/fixtures/` (captured once; model output
+only, no secrets).
+
+## License
+
+MIT — see [LICENSE](LICENSE).
