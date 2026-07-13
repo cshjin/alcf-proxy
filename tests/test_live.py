@@ -31,6 +31,7 @@ def test_responses_stream_end_to_end():
     assert r.status_code == 200
     body = r.text
     assert "response.output_text.delta" in body
+    assert "response.completed" in body  # terminal frame must be present (C2 regression)
     assert body.rstrip().endswith("[DONE]")
 
 
@@ -50,6 +51,7 @@ def test_messages_stream_end_to_end():
     )
     assert r.status_code == 200
     assert "message_start" in r.text
+    assert "message_stop" in r.text  # terminal frame must be present (C2 regression)
 
 
 @pytest.mark.live
