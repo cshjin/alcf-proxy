@@ -4,6 +4,9 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/alcf-proxy)](https://pypi.org/project/alcf-proxy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Coverage](https://img.shields.io/badge/coverage-88%25-green.svg)](#tests)
+[![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://alcf-proxy.readthedocs.io/en/latest/)
+
+📖 **Full documentation: [alcf-proxy.readthedocs.io](https://alcf-proxy.readthedocs.io/en/latest/)**
 
 A standalone, cross-platform **translating gateway** for [ALCF inference
 endpoints](https://docs.alcf.anl.gov/services/inference-endpoints/). Run one local proxy and point

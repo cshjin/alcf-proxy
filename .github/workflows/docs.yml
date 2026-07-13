@@ -1,0 +1,29 @@
+name: docs
+
+# Validate the docs build on every push/PR that touches them. Publishing itself is handled by
+# Read the Docs (which builds from this repo via webhook); this workflow is just a strict-build gate
+# so a broken link or bad config fails CI instead of silently breaking the live site.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install docs dependencies
+        run: pip install ".[docs]"
+      - name: Build docs (strict)
+        run: mkdocs build --strict

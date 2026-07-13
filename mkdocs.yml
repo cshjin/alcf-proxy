@@ -1,0 +1,84 @@
+site_name: alcf-proxy
+site_description: Standalone translating gateway for ALCF inference endpoints
+site_author: Hongwei Jin
+site_url: https://alcf-proxy.readthedocs.io/
+repo_url: https://github.com/cshjin/alcf-proxy
+repo_name: cshjin/alcf-proxy
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Hongwei Jin — MIT License
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: installation.md
+      - Authentication: authentication.md
+      - Quickstart: quickstart.md
+  - Configuration:
+      - Proxy config: configuration.md
+      - Endpoints & failover: endpoints.md
+  - Connect a CLI:
+      - Overview: clients/index.md
+      - Codex: clients/codex.md
+      - Claude Code: clients/claude-code.md
+      - OpenCode: clients/opencode.md
+      - Aider & OpenAI SDK: clients/openai-compatible.md
+  - Reference:
+      - CLI: cli.md
+      - Troubleshooting: troubleshooting.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/cshjin/alcf-proxy
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/alcf-proxy/
