@@ -125,6 +125,36 @@ Any OpenAI-compatible client (Aider, OpenCode, OpenAI SDK): set the base URL to
 
 Claude Code: set the Anthropic base URL to `http://localhost:11445` and any dummy key.
 
+## Models
+
+alcf-proxy forwards to any model ALCF serves. Run `alcf-proxy models` for the live list. Feature
+flags: **B** = batch, **T** = tool calling, **R** = reasoning, **H** = always hot.
+
+**⭐ Recommended: `openai/gpt-oss-120b`** — large reasoning model, always hot, tool calling + batch,
+available on both clusters (Sophia `openai/gpt-oss-120b`, Metis `gpt-oss-120b`); it's the built-in
+default.
+
+| Model (Sophia `sophia/vllm`) | B | T | R | H |
+|------------------------------|:-:|:-:|:-:|:-:|
+| ⭐ `openai/gpt-oss-120b` | ✅ | ✅ | ✅ | ✅ |
+| `openai/gpt-oss-20b` | ✅ | ✅ | ✅ | ✅ |
+| `meta-llama/Llama-4-Scout-17B-16E-Instruct` | ✅ | ✅ | | ✅ |
+| `meta-llama/Llama-4-Maverick-17B-128E-Instruct` | | ✅ | | |
+| `meta-llama/Llama-3.3-70B-Instruct` | ✅ | ✅ | | |
+| `meta-llama/Meta-Llama-3.1-{8B,70B,405B}-Instruct` | ✅ | ✅ | | * |
+| `google/gemma-3-27b-it` | ✅ | ✅ | | ✅ |
+| `google/gemma-4-{31B,E4B}-it` | | ✅ | ✅ | ✅ |
+| `nvidia/nemotron-3-super-120b` | | ✅ | ✅ | |
+| `arcee-ai/Trinity-Large-Thinking-W4A16` | | ✅ | ✅ | |
+| `mistralai/{Mistral-Large-2407,Devstral-2-123B,Mixtral-8x22B}` | | | | |
+
+Metis (`metis/api`, no `openai/` prefix, all always-hot; no batch/tools): `gpt-oss-120b` ⭐,
+`Llama-4-Maverick-17B-128E-Instruct`, `Mistral-Large-3-675B-Instruct-2512`, `gemma-4-31B-it`.
+
+Also on Sophia: vision (`meta-llama/Llama-3.2-90B-Vision-Instruct`), embeddings
+(`Salesforce/SFR-Embedding-Mistral`, `genslm-*`), and segmentation (`facebook/sam3`). Full table with
+every model: **[docs → Models](https://alcf-proxy.readthedocs.io/en/latest/models/)**.
+
 ## Configuration
 
 YAML file (search order: `./config.yaml`, then the platform user-config dir). CLI flags and
