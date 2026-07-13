@@ -59,6 +59,26 @@ uvx alcf-proxy serve                 # after PyPI registration
 - Binding to a non-loopback host (`--host 0.0.0.0`) is refused unless `ALCF_PROXY_API_KEY` is set,
   because the proxy injects your real ALCF token for every caller.
 
+### First-time login
+
+Run this once per machine before `serve` / `models`:
+
+```bash
+alcf-proxy auth login
+```
+
+It opens your default browser for Globus OAuth and starts a short-lived local callback server to
+receive the result, then stores the refresh + access tokens (good for months) in globus-sdk's
+per-platform location. Verify with `alcf-proxy auth status`.
+
+- **Windows / macOS / Linux desktop**: works out of the box — the browser opens and the local
+  callback completes automatically. No `~/.globus` path is assumed; the token location is whatever
+  globus-sdk chooses for your OS (`%LOCALAPPDATA%` on Windows), shown by `auth status`.
+- **Headless / remote (SSH, no local browser)**: the local-callback flow needs a browser that can
+  reach `localhost` on the login machine. If you're on a headless box, run `alcf-proxy auth login`
+  on a machine that has a browser using the **same OS user profile / token dir**, or forward the
+  callback port over SSH. (A copy-paste device-code fallback is not yet implemented.)
+
 ## Usage
 
 ```bash
