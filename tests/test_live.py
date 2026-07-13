@@ -3,7 +3,7 @@
 Marked @pytest.mark.live and skipped by default (the pyproject addopts excludes 'live').
 Run explicitly with:  python -m pytest -m live -o addopts="" -q
 
-Requires a valid ALCF token (python ~/inference_auth_token.py get_access_token) and at least one
+Requires a prior login (alcf-proxy auth login) and at least one
 up cluster. Uses the default failover chain, so it works even if sophia is under maintenance
 (it will fall back to metis automatically).
 """

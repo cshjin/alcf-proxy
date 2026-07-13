@@ -8,7 +8,7 @@ import sys
 
 import uvicorn
 
-from . import auth, config, endpoints
+from . import alcf_auth, auth, config, endpoints
 from .server import build_app
 
 
@@ -32,6 +32,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_cfg = sub.add_parser("config")
     p_cfg.add_argument("action", choices=["init", "show"])
+
+    p_auth = sub.add_parser("auth")
+    p_auth.add_argument("action", choices=["login", "status"])
 
     try:
         ns = parser.parse_args(argv)
@@ -86,6 +89,24 @@ def main(argv: list[str] | None = None) -> int:
             target = paths[-1]
             config.init_config(target, {})
             print(f"wrote {target}")
+            return 0
+
+    if ns.command == "auth":
+        if ns.action == "login":
+            try:
+                alcf_auth.authenticate()  # interactive browser flow (local server)
+            except Exception as e:  # noqa: BLE001
+                print(f"alcf-proxy: login failed: {e}", file=sys.stderr)
+                return 1
+            print("alcf-proxy: authenticated. Token stored at "
+                  f"{alcf_auth.token_filepath()}")
+            return 0
+        if ns.action == "status":
+            tm = auth.TokenManager()
+            hrs = tm.hours_left()
+            exists = alcf_auth.tokens_exist()
+            print(json.dumps({"authenticated": exists, "token_hours_left": hrs,
+                              "token_path": alcf_auth.token_filepath()}))
             return 0
 
     parser.print_help(sys.stderr)

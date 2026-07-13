@@ -57,5 +57,26 @@ def test_serve_allows_nonloopback_with_key(monkeypatch):
     assert called["host"] == "0.0.0.0"
 
 
+def test_auth_status(monkeypatch, capsys):
+    monkeypatch.setattr("alcf_proxy.cli.alcf_auth.tokens_exist", lambda: True)
+    monkeypatch.setattr("alcf_proxy.cli.alcf_auth.token_filepath", lambda: "/x/tokens.json")
+    monkeypatch.setattr("alcf_proxy.cli.auth.TokenManager.hours_left", lambda self: 40.0)
+    rc = cli.main(["auth", "status"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "authenticated" in out and "40" in out
+
+
+def test_auth_login_invokes_authenticate(monkeypatch, capsys):
+    called = {"n": 0}
+    monkeypatch.setattr("alcf_proxy.cli.alcf_auth.authenticate",
+                        lambda: called.update(n=called["n"] + 1))
+    monkeypatch.setattr("alcf_proxy.cli.alcf_auth.token_filepath", lambda: "/x/tokens.json")
+    rc = cli.main(["auth", "login"])
+    assert rc == 0
+    assert called["n"] == 1
+    assert "authenticated" in capsys.readouterr().out.lower()
+
+
 def test_unknown_command_errors():
     assert cli.main(["nonsense"]) != 0

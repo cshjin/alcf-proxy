@@ -47,11 +47,6 @@ def test_init_config_writes_yaml(tmp_path):
     assert loaded["port"] == 1234
 
 
-def test_auth_script_env_override(monkeypatch):
-    monkeypatch.setenv("ALCF_PROXY_AUTH_SCRIPT", "/tmp/x.py")
-    assert config.auth_script_path() == "/tmp/x.py"
-
-
 def test_endpoints_synthesized_from_primary_plus_defaults():
     cfg = config.Config({"cluster": "sophia", "framework": "vllm",
                          "default_model": "openai/gpt-oss-120b"})

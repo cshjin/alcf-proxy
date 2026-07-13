@@ -17,17 +17,19 @@ Bearer-authenticated gateway (not ANL ARGO), and the proxy manages ALCF's rotati
 - **Translates** every request to ALCF's streaming `chat/completions` upstream via
   [llm-rosetta](https://github.com/Oaklight/llm-rosetta), and translates the streamed reply back to
   the client's format — real token-by-token streaming.
-- **Manages the ALCF token**: fetches it via ALCF's Globus auth script, injects it as a Bearer
-  header, and refreshes automatically when it nears its ~48h expiry. Clients just use a dummy key.
+- **Manages the ALCF token**: authenticates via Globus (built in — no external script needed),
+  injects the token as a Bearer header, and refreshes automatically when it nears its ~48h expiry.
+  Clients just use a dummy key.
 - **Endpoint auto-failover**: if a cluster returns 503 / is under maintenance, the proxy advances to
   the next configured endpoint (remapping the per-endpoint model id) and sticks to the one that works.
 
 ## Prerequisites
 
-- **Python ≥ 3.10.**
-- **ALCF's `inference_auth_token.py`** on your machine, and the interpreter you run alcf-proxy with
-  must have `globus_sdk` installed (that's what the auth script imports). First-time login:
-  `python ~/inference_auth_token.py authenticate` (opens a browser for Globus OAuth).
+- **Python ≥ 3.10.** All auth is built in (via `globus-sdk`, installed automatically); you do **not**
+  need ALCF's `inference_auth_token.py`.
+- **First-time login** (once): `alcf-proxy auth login` — opens a browser for Globus OAuth and stores
+  the token in globus-sdk's standard per-platform location (resolved correctly on Linux/macOS/Windows;
+  check it any time with `alcf-proxy auth status`). The refresh token then lasts months.
 
 ## Install
 
@@ -51,12 +53,17 @@ uvx alcf-proxy serve                 # after PyPI registration
   `platformdirs`). Config lives at `~/.config/alcf-proxy/config.yaml` (Linux),
   `~/Library/Application Support/alcf-proxy/config.yaml` (macOS), or
   `%APPDATA%\alcf-proxy\config.yaml` (Windows).
-- On **Windows**, ensure `globus_sdk` is installed in the same environment and complete the
-  browser-based `authenticate` step once.
+- The token is stored by `globus-sdk` in its standard per-platform app-data dir (on **Windows** this
+  is under `%LOCALAPPDATA%`, resolved automatically — no hard-coded `~/.globus` path). Just run
+  `alcf-proxy auth login` once; `alcf-proxy auth status` prints the exact path in use.
+- Binding to a non-loopback host (`--host 0.0.0.0`) is refused unless `ALCF_PROXY_API_KEY` is set,
+  because the proxy injects your real ALCF token for every caller.
 
 ## Usage
 
 ```bash
+alcf-proxy auth login                     # one-time Globus browser login
+alcf-proxy auth status                    # authenticated? token path + hours left
 alcf-proxy serve                          # start the gateway (reads config or uses defaults)
 alcf-proxy serve --port 8080 --host 0.0.0.0
 alcf-proxy serve --cluster metis --framework api --model gpt-oss-120b
@@ -113,7 +120,8 @@ The ALCF token lives only in the proxy process memory; it is never written to an
 alcf_proxy/
   cli.py                 # serve / models / health / config
   config.py              # YAML + env + CLI config; endpoint failover list
-  auth.py                # TokenManager: fetch + refresh-on-expiry (via sys.executable)
+  alcf_auth.py           # internalized Globus auth (cross-platform token storage)
+  auth.py                # TokenManager: in-process fetch + refresh-on-expiry
   endpoints.py           # ALCF URLs + model listing
   upstream.py            # chat streaming client + EndpointSelector (failover)
   translate.py           # llm-rosetta engine: frontend <-> IR <-> chat

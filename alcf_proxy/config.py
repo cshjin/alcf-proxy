@@ -40,10 +40,6 @@ class Config:
     def as_dict(self) -> dict:
         return dict(self._v)
 
-    @property
-    def auth_script(self) -> str:
-        return auth_script_path()
-
     def endpoints(self) -> list[dict]:
         """Ordered list of {cluster, framework, model} to try, primary first.
 
@@ -107,9 +103,3 @@ def init_config(path: str, values: dict) -> None:
     merged.update(values)
     with open(path, "w") as f:
         yaml.safe_dump(merged, f, sort_keys=False)
-
-
-def auth_script_path() -> str:
-    return os.path.expanduser(
-        os.environ.get(_ENV_PREFIX + "AUTH_SCRIPT", "~/inference_auth_token.py")
-    )

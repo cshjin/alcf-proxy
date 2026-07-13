@@ -1,16 +1,16 @@
-"""In-process ALCF token manager: fetch via inference_auth_token.py, refresh near expiry.
+"""In-process ALCF token manager (cross-platform, no external script).
 
-The auth script imports globus_sdk, which is only present in the interpreter alcf-proxy runs under,
-so we invoke it with sys.executable (never a bare 'python3').
+Uses the internalized globus_sdk auth engine in ``alcf_auth`` directly — no subprocess, no
+dependency on ``~/inference_auth_token.py``, and no hard-coded token path (globus_sdk decides
+where tokens live, correctly on Windows too). A valid token is cached and refreshed only when it
+nears expiry.
 """
 from __future__ import annotations
 
-import subprocess
-import sys
 import threading
 import time
 
-from . import config
+from . import alcf_auth
 
 
 class AuthError(Exception):
@@ -24,27 +24,21 @@ class TokenManager:
         self._expiry_epoch: float = 0.0
         self._lock = threading.Lock()
 
-    def _run(self, subcmd: list[str]) -> str:
-        cmd = [sys.executable, config.auth_script_path(), *subcmd]
-        try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        except subprocess.TimeoutExpired as e:
-            raise AuthError(f"ALCF auth script timed out after 60s: {' '.join(cmd)}") from e
-        if proc.returncode != 0:
-            raise AuthError(
-                "ALCF auth failed. If your login expired, run:\n"
-                f"  {sys.executable} {config.auth_script_path()} authenticate\n"
-                f"--- stderr ---\n{proc.stderr.strip()}"
-            )
-        return proc.stdout.strip()
-
     def _fetch(self) -> str:
-        tok = self._run(["get_access_token"])
+        try:
+            tok = alcf_auth.access_token()
+            secs = alcf_auth.seconds_until_expiry()
+        except Exception as e:  # noqa: BLE001 - globus_sdk raises many error types
+            raise AuthError(
+                "Failed to obtain an ALCF token. If you have never logged in, or your Globus "
+                "refresh token expired (~6 months idle), authenticate with:\n"
+                "  alcf-proxy auth login\n"
+                f"--- cause ---\n{e}"
+            ) from e
         if not tok:
-            raise AuthError("Auth script returned an empty token.")
-        hrs = self.hours_left()
+            raise AuthError("ALCF auth returned an empty token.")
         self._token = tok
-        self._expiry_epoch = time.time() + (hrs * 3600 if hrs is not None else 0)
+        self._expiry_epoch = time.time() + max(secs, 0)
         return tok
 
     def get_valid_token(self) -> str:
@@ -55,7 +49,6 @@ class TokenManager:
 
     def hours_left(self) -> float | None:
         try:
-            out = self._run(["get_time_until_token_expiration", "--units", "hours"])
-            return float(out.split()[0])
-        except (AuthError, ValueError, IndexError):
+            return round(alcf_auth.seconds_until_expiry() / 3600, 2)
+        except Exception:  # noqa: BLE001
             return None
