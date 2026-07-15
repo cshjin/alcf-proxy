@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "alcf-proxy"
-version = "0.1.1"
+version = "0.1.2"
 description = "Standalone translating gateway for ALCF inference endpoints (OpenAI chat/responses, Anthropic messages)"
 readme = "README.md"
 license = {text = "MIT"}

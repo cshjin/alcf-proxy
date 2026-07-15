@@ -1,7 +1,9 @@
-"""Chat-request sanitizers for ALCF's vLLM backend (applied after translation to chat).
+"""Chat-request sanitizers for ALCF backends (applied after translation to chat).
 
 FACT 6: vLLM only accepts tools of type 'function'; codex sends 'namespace'/'web_search'.
-FACT 7: assistant message content may be a list of parts; vLLM wants a plain string there.
+FACT 7: message content may be a list of parts (any role). ALCF wants a plain string — metis
+(SambaNova) hard-rejects list content with HTTP 422 "Input should be a valid string", and vLLM is
+happiest with a string too. So we flatten list-of-parts content to a string for EVERY role.
 """
 from __future__ import annotations
 
@@ -33,9 +35,9 @@ def sanitize_chat(body: dict) -> dict:
     if isinstance(msgs, list):
         new = []
         for m in msgs:
-            if isinstance(m, dict) and m.get("role") == "assistant":
+            if isinstance(m, dict) and isinstance(m.get("content"), list):
                 m = dict(m)
-                m["content"] = _flatten_content(m.get("content"))
+                m["content"] = _flatten_content(m["content"])
             new.append(m)
         out["messages"] = new
     return out
