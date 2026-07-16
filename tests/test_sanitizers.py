@@ -47,6 +47,42 @@ def test_plain_string_content_untouched():
     assert out["messages"][0]["content"] == "already a string"
 
 
+def test_injects_default_max_tokens_when_missing():
+    # gpt-oss is a reasoning model: without a large budget, reasoning tokens exhaust max_tokens and
+    # the answer is truncated (finish_reason "length"). Inject a large default when the client omits it.
+    out = sanitizers.sanitize_chat({"messages": [{"role": "user", "content": "hi"}]})
+    assert out["max_tokens"] == 128000
+
+
+def test_does_not_override_explicit_max_tokens():
+    out = sanitizers.sanitize_chat({"messages": [], "max_tokens": 256})
+    assert out["max_tokens"] == 256
+
+
+def test_injects_default_reasoning_effort_when_missing():
+    out = sanitizers.sanitize_chat({"messages": [{"role": "user", "content": "hi"}]})
+    assert out["reasoning_effort"] == "high"
+
+
+def test_does_not_override_explicit_reasoning_effort():
+    out = sanitizers.sanitize_chat({"messages": [], "reasoning_effort": "low"})
+    assert out["reasoning_effort"] == "low"
+
+
+def test_defaults_are_configurable():
+    out = sanitizers.sanitize_chat(
+        {"messages": []}, default_max_tokens=4096, default_reasoning_effort="medium")
+    assert out["max_tokens"] == 4096
+    assert out["reasoning_effort"] == "medium"
+
+
+def test_defaults_can_be_disabled_with_none():
+    out = sanitizers.sanitize_chat(
+        {"messages": []}, default_max_tokens=None, default_reasoning_effort=None)
+    assert "max_tokens" not in out
+    assert "reasoning_effort" not in out
+
+
 def test_forces_stream_true():
     out = sanitizers.sanitize_chat({"messages": [], "stream": False})
     assert out["stream"] is True

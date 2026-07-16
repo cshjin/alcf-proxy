@@ -33,7 +33,7 @@ alcf-proxy config show
 
 ```yaml
 host: 127.0.0.1
-port: 11445                 # avoid argo's 11444 if you also run argo-proxy
+port: 11445                 # use a different port than any other proxy you run (e.g. argo-proxy)
 cluster: sophia            # primary cluster
 framework: vllm            # primary framework
 default_model: openai/gpt-oss-120b

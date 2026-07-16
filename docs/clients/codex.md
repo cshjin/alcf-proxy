@@ -92,9 +92,9 @@ env_key = "ALCF_DUMMY_KEY"
 
 ## Don't disturb an existing argo setup
 
-If you already use argo-proxy on `localhost:11444` as your default Codex provider, keep it — just add
+If you already use argo-proxy (on its own port) as your default Codex provider, keep it — just add
 `[model_providers.alcf]` alongside it and select it with `--profile alcf` (or the in-console `/model`
-switch). alcf-proxy runs on a different port (11445) and doesn't touch your argo config.
+switch). Run alcf-proxy on a **different port** than argo-proxy and it won't touch your argo config.
 
 ## Troubleshooting
 

@@ -1,5 +1,21 @@
 # Troubleshooting
 
+## Response ended with finish reason "length" (truncated / empty answer)
+
+`gpt-oss` is a **reasoning model**: it emits reasoning tokens *before* the answer, and those count
+against `max_tokens`. If a client (e.g. CherryStudio) sets a small `max_tokens`, reasoning can
+consume the whole budget and the answer is cut off — you see `finish_reason: "length"`, often with
+empty content.
+
+alcf-proxy mitigates this automatically: when a request **omits** `max_tokens` / `reasoning_effort`,
+the proxy injects generous defaults (`max_tokens=128000`, `reasoning_effort=high`). So the simplest
+fix is to **not set a small `max_tokens` in your client** — leave it unset and let the proxy default
+apply.
+
+If your client forces a small `max_tokens`, raise it (≥ 4096, ideally much more) or lower
+`reasoning_effort` to `low`/`medium` in the client so the answer fits. Note: an **explicit**
+client value is always respected — the proxy only fills in defaults when the field is missing.
+
 ## "We're currently experiencing high demand" (Codex) / empty replies
 
 Almost always the upstream ALCF cluster is unavailable, not real demand. Check:
@@ -80,8 +96,9 @@ requests are fast.
 
 ## Coexisting with argo-proxy
 
-argo-proxy typically runs on `localhost:11444`. alcf-proxy defaults to `11445`, so they don't
-collide. They are independent; configuring one never touches the other.
+Run alcf-proxy on a **different port** than argo-proxy (or any other local proxy) so they don't
+collide — alcf-proxy defaults to `11445`; set `--port` if that conflicts. They are independent;
+configuring one never touches the other.
 
 ## Still stuck?
 

@@ -5,7 +5,7 @@
 # Precedence: CLI flags > env (ALCF_PROXY_*) > this file > built-in defaults.
 
 host: 127.0.0.1
-port: 11445                 # avoid argo's 11444
+port: 11445                 # use a different port than any other local proxy (e.g. argo-proxy)
 cluster: sophia            # primary cluster
 framework: vllm            # primary framework
 default_model: openai/gpt-oss-120b
