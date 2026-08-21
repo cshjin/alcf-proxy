@@ -1,0 +1,55 @@
+# Upgrading
+
+## v0.1.x → v0.2.0
+
+**TL;DR: no migration work for typical setups.** Client configs (Codex / Claude Code / OpenCode /
+Aider), your `config.yaml`, and your Globus login all keep working as-is. Upgrade is just:
+
+```bash
+pip install -U alcf-proxy
+# then restart the proxy (a running process does not hot-reload):
+alcf-proxy serve
+```
+
+### What stays compatible
+
+- **Client setup unchanged** — same base URL (`http://localhost:11445/v1`), same dummy API key,
+  same endpoints (`/v1/chat/completions`, `/v1/responses`, `/v1/messages`).
+- **`config.yaml` unchanged** — every v0.1.x key is still valid. The new `cluster_priority` key is
+  optional (defaults to `[sophia, metis, minerva]`). An existing explicit `endpoints:` list behaves
+  exactly as before (and now explicitly bypasses the new router).
+- **Auth unchanged** — same token storage; upgrading does not require a new login. (Separately,
+  ALCF now forces a re-login every ~30 days — see
+  [Authentication](authentication.md#30-day-re-authentication-policy).)
+- **CLI unchanged** — `serve` / `models` / `health` / `config` / `auth`, same flags. The
+  human-readable output of `alcf-proxy models` is unchanged.
+
+### Behavior changes to be aware of
+
+1. **Unknown models now return `400`** (previously: any requested model id was *silently remapped*
+   to the configured chain's model — asking for Llama could quietly get you gpt-oss).
+   With unified routing, the model you ask for is the model you get; ids not in the live catalog
+   are rejected with a hint.
+   *Affected:* clients configured with arbitrary/stale model names.
+   *Fix:* use a real id from `alcf-proxy models` (any cluster's spelling works), or pin an
+   explicit `endpoints:` list in `config.yaml` to restore the old remapping behavior.
+
+2. **`/v1/models` response shape is now standard OpenAI** —
+   `{"object": "list", "data": [{"id": ..., "object": "model", "owned_by": "cluster/fw"}]}`
+   instead of the old `{"data": ["cluster/fw: model", ...]}` string list.
+   *Affected:* only scripts that parsed the old strings. GUI clients (CherryStudio etc.) now work
+   *better* — they can list and pick models directly.
+   *Fix:* read `data[].id`.
+
+3. **`ALCF_PROXY_API_KEY` is now enforced** on every route except `/health` (in v0.1.x it only
+   gated non-loopback binding and was never checked inbound).
+   *Affected:* setups that set the env var but whose clients send a dummy key — those now get `401`.
+   *Fix:* have clients send `Authorization: Bearer <your ALCF_PROXY_API_KEY>`, or unset the var for
+   loopback-only use (default behavior unchanged: no key set → any dummy key accepted).
+
+### New in v0.2.0 (no action needed, just nicer)
+
+- **Unified model routing**: request any model id from `alcf-proxy models`; the proxy resolves the
+  hosting cluster, remaps per-cluster id spellings, and fails over across clusters automatically.
+- **Three-cluster failover for gpt-oss-120b** (sophia, metis, and the new Minerva all serve it).
+- Clear guidance when ALCF's 30-day re-auth policy trips (instead of a raw 401).

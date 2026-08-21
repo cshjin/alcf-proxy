@@ -63,6 +63,7 @@ nav:
       - Installation: installation.md
       - Authentication: authentication.md
       - Quickstart: quickstart.md
+      - Upgrading: upgrading.md
   - Models: models.md
   - Configuration:
       - Proxy config: configuration.md

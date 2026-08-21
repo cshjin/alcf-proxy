@@ -95,6 +95,13 @@ per-platform location. Verify with `alcf-proxy auth status`.
   on a machine that has a browser using the **same OS user profile / token dir**, or forward the
   callback port over SSH. (A copy-paste device-code fallback is not yet implemented.)
 
+### Upgrading from v0.1.x
+
+`pip install -U alcf-proxy` and restart the proxy — client configs and `config.yaml` keep working
+as-is. Three behavior changes to know (unknown models now 400 instead of silent remap; `/v1/models`
+is now OpenAI-shaped; `ALCF_PROXY_API_KEY` is now enforced):
+see **[docs → Upgrading](https://alcf-proxy.readthedocs.io/en/latest/upgrading/)**.
+
 ## Usage
 
 ```bash
