@@ -13,16 +13,22 @@ DEFAULTS = {
     "framework": "vllm",
     "default_model": "openai/gpt-oss-120b",
     "verbose": False,
+    # Cluster order used by the unified model router when several clusters serve a model,
+    # and by the built-in failover chain.
+    "cluster_priority": ["sophia", "metis", "minerva"],
 }
 _ENV_PREFIX = "ALCF_PROXY_"
 _INT_KEYS = {"port"}
 _BOOL_KEYS = {"verbose"}
+_LIST_KEYS = {"cluster_priority"}  # env override: comma-separated
 
 # Built-in fallback chain, tried in order when a cluster is down (503/maintenance).
 # Model ids differ per endpoint (sophia/vllm uses the openai/ prefix; metis/api does not).
+# All three clusters serve gpt-oss-120b (verified live 2026-08-21), so the whole chain is one model.
 DEFAULT_ENDPOINTS = [
     {"cluster": "sophia", "framework": "vllm", "model": "openai/gpt-oss-120b"},
     {"cluster": "metis", "framework": "api", "model": "gpt-oss-120b"},
+    {"cluster": "minerva", "framework": "api", "model": "gpt-oss-120b"},
 ]
 
 
@@ -39,6 +45,10 @@ class Config:
 
     def as_dict(self) -> dict:
         return dict(self._v)
+
+    def has_explicit_endpoints(self) -> bool:
+        """True when the user pinned an explicit `endpoints:` list (bypasses the model router)."""
+        return bool(self._v.get("endpoints"))
 
     def endpoints(self) -> list[dict]:
         """Ordered list of {cluster, framework, model} to try, primary first.
@@ -71,6 +81,8 @@ def _coerce(key, val):
         return int(val)
     if key in _BOOL_KEYS:
         return str(val).lower() in ("1", "true", "yes", "on")
+    if key in _LIST_KEYS:
+        return [x.strip() for x in str(val).split(",") if x.strip()]
     return val
 
 

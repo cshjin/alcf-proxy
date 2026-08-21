@@ -6,17 +6,18 @@
 
 host: 127.0.0.1
 port: 11445                 # use a different port than any other local proxy (e.g. argo-proxy)
-cluster: sophia            # primary cluster
+cluster: sophia            # primary cluster (used by the fallback chain)
 framework: vllm            # primary framework
 default_model: openai/gpt-oss-120b
 verbose: false
 
-# Optional: path to ALCF's Globus auth script (default ~/inference_auth_token.py).
-# auth_script: ~/inference_auth_token.py
+# Unified model routing (default): the proxy resolves any requested model to whichever cluster
+# serves it, ordered by this priority; failover between clusters is automatic.
+cluster_priority: [sophia, metis, minerva]
 
-# Optional: explicit ordered failover list. If omitted, alcf-proxy synthesizes the primary
-# (cluster/framework/default_model above) followed by a built-in fallback chain. When a cluster
-# returns 503/maintenance, the proxy advances to the next endpoint and sticks to the one that works.
+# Optional: explicit ordered failover list. Setting this BYPASSES unified routing — every request
+# goes through this chain in order regardless of the requested model. When a cluster returns
+# 503/maintenance, the proxy advances to the next endpoint and sticks to the one that works.
 # NOTE: the model id differs per endpoint (sophia/vllm uses the openai/ prefix; metis/api does not).
 # endpoints:
 #   - {cluster: sophia, framework: vllm, model: openai/gpt-oss-120b}

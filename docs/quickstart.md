@@ -19,11 +19,12 @@ alcf-proxy serve
 alcf-proxy serving on http://127.0.0.1:11445 (sophia/vllm)
 ```
 
-By default it binds `127.0.0.1:11445` with primary cluster `sophia/vllm` and default model
-`openai/gpt-oss-120b`, and will fail over to `metis/api` if sophia is down. Override at launch:
+By default it binds `127.0.0.1:11445` with **unified model routing**: request any model from
+`alcf-proxy models` and the proxy resolves which cluster (Sophia / Metis / Minerva) serves it,
+failing over automatically when a cluster is down — no per-cluster setup. Override basics at launch:
 
 ```bash
-alcf-proxy serve --port 8080 --cluster metis --framework api --model gpt-oss-120b
+alcf-proxy serve --port 8080
 ```
 
 ## 3. Check it's healthy
@@ -35,7 +36,7 @@ curl -s http://localhost:11445/health
 ```
 
 ```json
-{"status":"ok","token_hours_left":45.7,"cluster":"sophia","framework":"vllm",
+{"status":"ok","routing":"unified","token_hours_left":45.7,"cluster":"sophia","framework":"vllm",
  "active_endpoint":{"cluster":"sophia","framework":"vllm","model":"openai/gpt-oss-120b"}, "...":"..."}
 ```
 
@@ -84,8 +85,7 @@ That's the real use case — see [Connect a CLI](clients/index.md) for
 [Codex](clients/codex.md), [Claude Code](clients/claude-code.md),
 [OpenCode](clients/opencode.md), and [Aider / OpenAI SDK](clients/openai-compatible.md).
 
-!!! tip "Model ids differ per cluster"
-    On `sophia/vllm` the model is `openai/gpt-oss-120b`; on `metis/api` it is `gpt-oss-120b` (no
-    `openai/` prefix). When failover switches clusters, the proxy remaps the model for you — but if
-    you pin a model in your CLI, use the id for the cluster you're targeting. Run `alcf-proxy models`
-    to see exact ids.
+!!! tip "Any model id just works"
+    Model ids differ per cluster (`openai/gpt-oss-120b` on sophia vs `gpt-oss-120b` on metis), but
+    unified routing resolves either form and remaps automatically on failover. Just pick anything
+    from `alcf-proxy models`.

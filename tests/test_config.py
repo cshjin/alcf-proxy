@@ -65,6 +65,27 @@ def test_endpoints_primary_not_duplicated_in_defaults():
     assert eps[0]["cluster"] == "metis"
 
 
+def test_default_chain_includes_minerva_last():
+    cfg = config.Config({})
+    eps = cfg.endpoints()
+    assert eps[-1] == {"cluster": "minerva", "framework": "api", "model": "gpt-oss-120b"}
+    assert [e["cluster"] for e in eps] == ["sophia", "metis", "minerva"]
+
+
+def test_cluster_priority_default_and_env_override(monkeypatch):
+    assert config.Config({}).cluster_priority == ["sophia", "metis", "minerva"]
+    monkeypatch.setattr(config, "config_search_paths", lambda: [])
+    monkeypatch.setenv("ALCF_PROXY_CLUSTER_PRIORITY", "metis, sophia")
+    cfg = config.load_config()
+    assert cfg.cluster_priority == ["metis", "sophia"]
+
+
+def test_has_explicit_endpoints():
+    assert config.Config({}).has_explicit_endpoints() is False
+    cfg = config.Config({"endpoints": [{"cluster": "metis", "framework": "api", "model": "m"}]})
+    assert cfg.has_explicit_endpoints() is True
+
+
 def test_endpoints_explicit_list_used_verbatim():
     cfg = config.Config({"endpoints": [
         {"cluster": "metis", "framework": "api", "model": "gpt-oss-120b"},

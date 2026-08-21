@@ -38,6 +38,35 @@ def test_maintenance_raises(monkeypatch):
     assert "maintenance" in str(e.value).lower()
 
 
+def test_high_assurance_401_gives_reauth_guidance(monkeypatch):
+    # ALCF's 30-day high-assurance policy: token file looks valid but the gateway rejects with
+    # 401 "Permission denied from internal policies". Must surface actionable guidance.
+    import json
+    def fake_stream(method, url, **kw):
+        fs = FakeStream([], status=401)
+        fs.read = lambda: json.dumps({"error": {"code": "unauthorized", "message":
+            "Error: Permission denied from internal policies. This is likely due to a "
+            "high-assurance timeout. Please logout ..."}}).encode()
+        return fs
+    monkeypatch.setattr(httpx, "stream", fake_stream)
+    with pytest.raises(upstream.UpstreamError) as e:
+        list(upstream.stream_chat({"messages": []}, "T", "sophia", "vllm"))
+    msg = str(e.value)
+    assert "app.globus.org/logout" in msg
+    assert "alcf-proxy auth login" in msg
+
+
+def test_plain_401_still_reports_status(monkeypatch):
+    def fake_stream(method, url, **kw):
+        fs = FakeStream([], status=401)
+        fs.read = lambda: b'{"error": "bad token"}'
+        return fs
+    monkeypatch.setattr(httpx, "stream", fake_stream)
+    with pytest.raises(upstream.UpstreamError) as e:
+        list(upstream.stream_chat({"messages": []}, "T", "sophia", "vllm"))
+    assert "401" in str(e.value)
+
+
 # ---- failover: EndpointSelector ----
 
 ENDPOINTS = [

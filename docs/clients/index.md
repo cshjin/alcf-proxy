@@ -34,6 +34,7 @@ http://localhost:11445/v1
 
 </div>
 
-!!! tip "Model ids"
-    Use the id for the cluster you're serving: `openai/gpt-oss-120b` (sophia/vllm) or `gpt-oss-120b`
-    (metis/api). Run `alcf-proxy models` to list exact ids.
+!!! tip "Model ids — any of them just work"
+    Since v0.2.0 the proxy does **unified routing**: request any model from `alcf-proxy models`
+    (e.g. `openai/gpt-oss-120b`, `gpt-oss-120b`, `nemotron-3-ultra`) and it is routed to whichever
+    cluster serves it, with automatic cross-cluster failover. No per-cluster configuration.

@@ -41,6 +41,9 @@ def stream_chat(chat_body: dict, token: str, cluster: str, framework: str,
                 raise EndpointDown(f"ALCF cold-start did not become ready: {raw[:200]}")
             if r.status_code != 200:
                 raw = r.read().decode(errors="replace")
+                if endpoints.policy_401(r.status_code, raw):
+                    raise UpstreamError(
+                        f"{endpoints.REAUTH_GUIDANCE}\n--- gateway said ---\n{raw[:300]}")
                 raise UpstreamError(f"ALCF HTTP {r.status_code}: {raw[:300]}")
             for line in r.iter_lines():
                 d = sse.parse_sse_line(line if isinstance(line, str) else line.decode())

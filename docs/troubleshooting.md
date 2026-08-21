@@ -41,6 +41,23 @@ alcf-proxy serve --host 0.0.0.0
 Clients must then send `Authorization: Bearer strong-secret`. See
 [Security](configuration.md#security-binding-beyond-localhost).
 
+## 401 "Permission denied from internal policies" (worked yesterday, 401 today)
+
+ALCF's **30-day high-assurance policy**: the gateway requires a fresh login every ~30 days, even
+while your access token still looks valid locally. The proxy surfaces this as a `502` whose error
+text starts with "ALCF session expired (30-day re-authentication policy)". Fix:
+
+1. Logout at [app.globus.org/logout](https://app.globus.org/logout)
+2. `alcf-proxy auth login`
+
+See [Authentication](authentication.md#30-day-re-authentication-policy).
+
+## 400 "Model ... is not served by any ALCF cluster"
+
+Unified routing couldn't find the requested model in the live catalog. Run `alcf-proxy models` and
+use one of the listed ids (any cluster's id works — routing is automatic). If the model *should*
+exist, the catalog cache refreshes within ~10 minutes, or restart the proxy.
+
 ## Auth: "Failed to obtain an ALCF token"
 
 Your login expired or never happened. Re-authenticate:
@@ -54,19 +71,10 @@ On a headless machine, see the [headless login notes](authentication.md#platform
 
 ## Wrong model id / 400 from upstream
 
-Model ids differ per cluster:
-
-- `sophia/vllm` → `openai/gpt-oss-120b`
-- `metis/api` → `gpt-oss-120b`
-
-List exact ids:
-
-```bash
-alcf-proxy models
-```
-
-If you pinned a model in your CLI for a cluster that failed over, the id may no longer match. Prefer
-letting the proxy use its `default_model`, or pin the id for the endpoint you actually target.
+Since v0.2.0 this is mostly a non-issue: unified routing accepts **either** form of a model id
+(`openai/gpt-oss-120b` or `gpt-oss-120b`) and remaps it per cluster automatically. If you still get
+a 400, the model isn't in the current catalog — run `alcf-proxy models`. Note: with an explicit
+`endpoints:` override in config, routing is bypassed and the chain's pinned ids are used as-is.
 
 ## Port already in use
 

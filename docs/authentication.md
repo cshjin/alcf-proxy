@@ -65,6 +65,20 @@ exact path. Typical locations:
     !!! note
         A copy-paste device-code fallback is not yet implemented. If you need it, open an issue.
 
+## 30-day re-authentication policy
+
+!!! warning "ALCF requires a fresh login every 30 days"
+    Since ~August 2026 ALCF enforces a **high-assurance policy**: even with a valid-looking token,
+    the gateway starts rejecting requests with
+    `401 "Permission denied from internal policies"` about 30 days after your last login.
+    alcf-proxy detects this and tells you exactly what to do:
+
+    1. Logout at [app.globus.org/logout](https://app.globus.org/logout)
+    2. Run `alcf-proxy auth login` again
+
+    Note `alcf-proxy auth status` may still show hours left on the *access token* — the 30-day
+    limit is a separate server-side session policy on top of it.
+
 ## Token lifecycle
 
 - **Access token** rotates ~every 48h. The proxy caches it and refetches only when < 5 min from

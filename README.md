@@ -28,8 +28,10 @@ Bearer-authenticated gateway (not ANL ARGO), and the proxy manages ALCF's rotati
 - **Manages the ALCF token**: authenticates via Globus (built in — no external script needed),
   injects the token as a Bearer header, and refreshes automatically when it nears its ~48h expiry.
   Clients just use a dummy key.
-- **Endpoint auto-failover**: if a cluster returns 503 / is under maintenance, the proxy advances to
-  the next configured endpoint (remapping the per-endpoint model id) and sticks to the one that works.
+- **Unified model routing** (v0.2.0): one pool across all ALCF clusters (Sophia, Metis, Minerva).
+  Request any model id — the proxy resolves which cluster serves it (remapping per-cluster ids like
+  `openai/gpt-oss-120b` vs `gpt-oss-120b`), sticks to a working cluster, and **fails over
+  automatically** on 503/maintenance. No per-cluster configuration, ever.
 
 ## Prerequisites
 
@@ -131,25 +133,26 @@ alcf-proxy forwards to any model ALCF serves. Run `alcf-proxy models` for the li
 flags: **B** = batch, **T** = tool calling, **R** = reasoning, **H** = always hot.
 
 **⭐ Recommended: `openai/gpt-oss-120b`** — large reasoning model, always hot, tool calling + batch,
-available on both clusters (Sophia `openai/gpt-oss-120b`, Metis `gpt-oss-120b`); it's the built-in
+available on Sophia (`openai/gpt-oss-120b`) and Metis (`gpt-oss-120b`); it is the built-in
 default.
 
 | Model (Sophia `sophia/vllm`) | B | T | R | H |
 |------------------------------|:-:|:-:|:-:|:-:|
 | ⭐ `openai/gpt-oss-120b` | ✅ | ✅ | ✅ | ✅ |
 | `openai/gpt-oss-20b` | ✅ | ✅ | ✅ | ✅ |
-| `meta-llama/Llama-4-Scout-17B-16E-Instruct` | ✅ | ✅ | | ✅ |
+| `meta-llama/Llama-4-Scout-17B-16E-Instruct` | ✅ | ✅ | | |
 | `meta-llama/Llama-4-Maverick-17B-128E-Instruct` | | ✅ | | |
 | `meta-llama/Llama-3.3-70B-Instruct` | ✅ | ✅ | | |
 | `meta-llama/Meta-Llama-3.1-{8B,70B,405B}-Instruct` | ✅ | ✅ | | * |
-| `google/gemma-3-27b-it` | ✅ | ✅ | | ✅ |
+| `google/gemma-3-27b-it` | ✅ | ✅ | | |
 | `google/gemma-4-{31B,E4B}-it` | | ✅ | ✅ | ✅ |
 | `nvidia/nemotron-3-super-120b` | | ✅ | ✅ | |
 | `arcee-ai/Trinity-Large-Thinking-W4A16` | | ✅ | ✅ | |
 | `mistralai/{Mistral-Large-2407,Devstral-2-123B,Mixtral-8x22B}` | | | | |
 
 Metis (`metis/api`, no `openai/` prefix, all always-hot; no batch/tools): `gpt-oss-120b` ⭐,
-`Llama-4-Maverick-17B-128E-Instruct`, `Mistral-Large-3-675B-Instruct-2512`, `gemma-4-31B-it`.
+`Mistral-Large-3-675B-Instruct-2512`, `gemma-4-31B-it`. Minerva (`minerva/api`, NVIDIA B200, new):
+`nemotron-3-ultra` (always hot).
 
 Also on Sophia: vision (`meta-llama/Llama-3.2-90B-Vision-Instruct`), embeddings
 (`Salesforce/SFR-Embedding-Mistral`, `genslm-*`), and segmentation (`facebook/sam3`). Full table with
@@ -207,3 +210,17 @@ only, no secrets).
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+
+## Citation
+
+If you use this software in your research, please consider citing:
+
+```bibtex
+@misc{alcf_proxy,
+  title = {ALCF-proxy: Translating gateway for ALCF inference endpoints},
+  author = {Jin, Hongwei},
+  year = {2026},
+  url = {https://github.com/cshjin/alcf-proxy},
+}
+```

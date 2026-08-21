@@ -25,7 +25,7 @@ def test_responses_stream_end_to_end():
             "input": [{"type": "message", "role": "user",
                        "content": [{"type": "input_text", "text": "say exactly: hello world"}]}],
             "stream": True,
-            "max_output_tokens": 64,
+            "max_output_tokens": 2000,  # reasoning model: small budgets get eaten by reasoning (FACT 8)
         },
     )
     assert r.status_code == 200
@@ -46,7 +46,7 @@ def test_messages_stream_end_to_end():
             "model": "gpt-oss-120b",
             "messages": [{"role": "user", "content": "say hi"}],
             "stream": True,
-            "max_tokens": 64,
+            "max_tokens": 2000,
         },
     )
     assert r.status_code == 200

@@ -57,6 +57,7 @@ Every top-level key has an `ALCF_PROXY_<KEY>` override:
 | `ALCF_PROXY_FRAMEWORK` | primary framework |
 | `ALCF_PROXY_DEFAULT_MODEL` | default model id |
 | `ALCF_PROXY_VERBOSE` | `true`/`false` verbose logging |
+| `ALCF_PROXY_CLUSTER_PRIORITY` | comma-separated cluster order for unified routing (e.g. `metis,sophia`) |
 | `ALCF_PROXY_API_KEY` | require this bearer key from clients (needed for non-loopback bind) |
 
 === "Linux / macOS"
@@ -86,6 +87,8 @@ export ALCF_PROXY_API_KEY="choose-a-strong-secret"
 alcf-proxy serve --host 0.0.0.0 --port 8080
 ```
 
-Clients must then send `Authorization: Bearer choose-a-strong-secret`.
+Clients must then send `Authorization: Bearer choose-a-strong-secret`. Since v0.2.0 this is
+**enforced** on every route except `/health`: requests with a missing or wrong key get `401`.
+(When `ALCF_PROXY_API_KEY` is unset and the bind is loopback, any dummy key is accepted as before.)
 
 Next: [Endpoints & failover](endpoints.md).
