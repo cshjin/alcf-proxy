@@ -37,7 +37,11 @@ def sanitize_chat(
     out = dict(body)
     out["stream"] = True
     # Reasoning-model defaults: inject only when the client didn't specify them. Pass None to disable.
-    if default_max_tokens is not None and out.get("max_tokens") is None:
+    if (
+        default_max_tokens is not None
+        and out.get("max_tokens") is None
+        and out.get("max_completion_tokens") is None
+    ):
         out["max_tokens"] = default_max_tokens
     if default_reasoning_effort is not None and out.get("reasoning_effort") is None:
         out["reasoning_effort"] = default_reasoning_effort

@@ -16,6 +16,8 @@ import time
 # Globus UserApp name and public inference client / gateway scope (from ALCF's official script).
 APP_NAME = "inference_app"
 AUTH_CLIENT_ID = "58fdd3bc-e1c3-4ce5-80ea-8d6b87cfb944"
+ALCF_TOKENS_APP_NAME = "alcf_tokens"
+ALCF_TOKENS_CLIENT_ID = "7f3e61f5-e0de-4e8f-9150-0a62c65dda63"
 GATEWAY_CLIENT_ID = "681c10cc-f684-4540-bcd7-0b4df3bc26ef"
 GATEWAY_SCOPE = f"https://auth.globus.org/scopes/{GATEWAY_CLIENT_ID}/action_all"
 # Identity-provider policy that guides the user to the correct login.
@@ -30,7 +32,7 @@ def _auth_params():
     )
 
 
-def build_app():
+def build_app(app_name: str | None = None, client_id: str | None = None):
     """Create the Globus UserApp for ALCF inference (reuses stored tokens if present)."""
     import globus_sdk
 
@@ -39,15 +41,27 @@ def build_app():
             print(f"Encountered error '{error}', initiating login...")
             app.login(auth_params=_auth_params())
 
-    return globus_sdk.UserApp(
-        APP_NAME,
-        client_id=AUTH_CLIENT_ID,
-        scope_requirements={GATEWAY_CLIENT_ID: [GATEWAY_SCOPE]},
-        config=globus_sdk.GlobusAppConfig(
-            request_refresh_tokens=True,
-            token_validation_error_handler=_DomainBasedErrorHandler(),
-        ),
-    )
+    def _make(a_name: str, c_id: str):
+        return globus_sdk.UserApp(
+            a_name,
+            client_id=c_id,
+            scope_requirements={GATEWAY_CLIENT_ID: [GATEWAY_SCOPE]},
+            config=globus_sdk.GlobusAppConfig(
+                request_refresh_tokens=True,
+                token_validation_error_handler=_DomainBasedErrorHandler(),
+            ),
+        )
+
+    if app_name is None and client_id is None:
+        default_app = _make(APP_NAME, AUTH_CLIENT_ID)
+        if tokens_exist(default_app):
+            return default_app
+        alt_app = _make(ALCF_TOKENS_APP_NAME, ALCF_TOKENS_CLIENT_ID)
+        if tokens_exist(alt_app):
+            return alt_app
+        return default_app
+
+    return _make(app_name or APP_NAME, client_id or AUTH_CLIENT_ID)
 
 
 def token_filepath(app=None) -> str | None:
