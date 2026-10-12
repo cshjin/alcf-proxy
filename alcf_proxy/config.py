@@ -1,14 +1,17 @@
-"""Configuration: YAML file + env + CLI overrides, with cross-platform search paths."""
+"""Configuration: .env + YAML file + env + CLI overrides, with cross-platform search paths."""
 from __future__ import annotations
 
 import os
 
 import yaml
+from dotenv import load_dotenv
 from platformdirs import user_config_dir
 
 DEFAULTS = {
     "host": "127.0.0.1",
-    "port": 11445,
+    # No built-in default: set it in .env (see .env.example), config.yaml, or --port, so no
+    # specific port number is hardcoded into the package or baked into version control.
+    "port": None,
     "cluster": "sophia",
     "framework": "vllm",
     "default_model": "openai/gpt-oss-120b",
@@ -77,6 +80,17 @@ def config_search_paths() -> list[str]:
     return ["./config.yaml", os.path.join(user_config_dir("alcf-proxy"), "config.yaml")]
 
 
+def dotenv_search_paths() -> list[str]:
+    return ["./.env", os.path.join(user_config_dir("alcf-proxy"), ".env")]
+
+
+def _load_dotenv() -> None:
+    for p in dotenv_search_paths():
+        if os.path.isfile(p):
+            load_dotenv(p, override=False)
+            break
+
+
 def _coerce(key, val):
     if key in _INT_KEYS:
         return int(val)
@@ -97,6 +111,7 @@ def _from_env() -> dict:
 
 
 def load_config(cli_overrides: dict | None = None, path: str | None = None) -> Config:
+    _load_dotenv()
     values: dict = {}
     paths = [path] if path else config_search_paths()
     for p in paths:

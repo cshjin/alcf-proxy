@@ -9,17 +9,27 @@ pip install alcf-proxy
 alcf-proxy auth login      # one-time, opens a browser
 ```
 
-## 2. Start the proxy
+## 2. Pick a port & start the proxy
+
+alcf-proxy ships with **no built-in default port** — copy the template and set your own, once:
+
+```bash
+cp .env.example .env
+$EDITOR .env               # uncomment ALCF_PROXY_PORT=... and set a free port
+```
+
+`.env` is gitignored, so this never ends up in a commit or a shared `config.yaml`. The rest of the
+docs write `<PORT>` for whatever you chose here (or passed via `--port`).
 
 ```bash
 alcf-proxy serve
 ```
 
 ```text
-alcf-proxy serving on http://127.0.0.1:11445 (sophia/vllm)
+alcf-proxy serving on http://127.0.0.1:<PORT> (sophia/vllm)
 ```
 
-By default it binds `127.0.0.1:11445` with **unified model routing**: request any model from
+By default it binds `127.0.0.1` with **unified model routing**: request any model from
 `alcf-proxy models` and the proxy resolves which cluster (Sophia / Metis / Minerva) serves it,
 failing over automatically when a cluster is down — no per-cluster setup. Override basics at launch:
 
@@ -32,7 +42,7 @@ alcf-proxy serve --port 8080
 In another terminal:
 
 ```bash
-curl -s http://localhost:11445/health
+curl -s http://localhost:<PORT>/health
 ```
 
 ```json
@@ -54,7 +64,7 @@ ALCF token):
 === "curl (chat/completions)"
 
     ```bash
-    curl -s http://localhost:11445/v1/chat/completions \
+    curl -s http://localhost:<PORT>/v1/chat/completions \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer dummy" \
       -d '{
@@ -69,7 +79,7 @@ ALCF token):
     ```python
     from openai import OpenAI
 
-    client = OpenAI(base_url="http://localhost:11445/v1", api_key="dummy")
+    client = OpenAI(base_url="http://localhost:<PORT>/v1", api_key="dummy")
     resp = client.chat.completions.create(
         model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": "say hello in 3 words"}],

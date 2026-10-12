@@ -87,7 +87,7 @@ The pre-v0.2.0 mechanism still exists for two purposes:
 `/health` reports the routing mode, the fallback chain, and its currently active endpoint:
 
 ```bash
-curl -s http://localhost:11445/health
+curl -s http://localhost:<PORT>/health
 ```
 
 ```json

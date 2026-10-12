@@ -44,6 +44,10 @@ def main(argv: list[str] | None = None) -> int:
     if ns.command == "serve":
         overrides = {k: getattr(ns, k) for k in ("host", "port", "cluster", "framework", "default_model")}
         cfg = config.load_config(cli_overrides=overrides, path=ns.config)
+        if cfg.port is None:
+            print("alcf-proxy: no port configured. Copy .env.example to .env and set "
+                  "ALCF_PROXY_PORT (or pass --port, or set `port:` in config.yaml).", file=sys.stderr)
+            return 1
         # Security: the proxy injects the real ALCF token for every caller. Binding to a non-loopback
         # host would expose that token to the network, so refuse unless an inbound API key is set.
         if not _is_loopback(cfg.host) and not os.environ.get("ALCF_PROXY_API_KEY"):

@@ -14,7 +14,7 @@ alcf-proxy serve    # keep running
 === "Linux / macOS"
 
     ```bash
-    export OPENAI_API_BASE="http://localhost:11445/v1"
+    export OPENAI_API_BASE="http://localhost:<PORT>/v1"
     export OPENAI_API_KEY="dummy"
     aider --model openai/openai/gpt-oss-120b
     ```
@@ -22,7 +22,7 @@ alcf-proxy serve    # keep running
 === "Windows (PowerShell)"
 
     ```powershell
-    $env:OPENAI_API_BASE = "http://localhost:11445/v1"
+    $env:OPENAI_API_BASE = "http://localhost:<PORT>/v1"
     $env:OPENAI_API_KEY = "dummy"
     aider --model openai/openai/gpt-oss-120b
     ```
@@ -37,7 +37,7 @@ alcf-proxy serve    # keep running
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:11445/v1", api_key="dummy")
+client = OpenAI(base_url="http://localhost:<PORT>/v1", api_key="dummy")
 
 # non-streaming
 resp = client.chat.completions.create(
@@ -62,7 +62,7 @@ Any OpenAI SDK accepts a custom base URL. For example, JS:
 
 ```js
 import OpenAI from "openai";
-const client = new OpenAI({ baseURL: "http://localhost:11445/v1", apiKey: "dummy" });
+const client = new OpenAI({ baseURL: "http://localhost:<PORT>/v1", apiKey: "dummy" });
 ```
 
 ## Tips

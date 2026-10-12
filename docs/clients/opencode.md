@@ -6,7 +6,7 @@
 ## 1. Start the proxy
 
 ```bash
-alcf-proxy serve        # http://localhost:11445
+alcf-proxy serve        # http://localhost:<PORT>
 ```
 
 ## 2. Configure an OpenAI-compatible provider
@@ -22,7 +22,7 @@ a custom provider pointing to the proxy:
       "name": "alcf-proxy",
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
-        "baseURL": "http://localhost:11445/v1"
+        "baseURL": "http://localhost:<PORT>/v1"
       },
       "models": {
         "inkling-bf16": {
@@ -63,12 +63,12 @@ opencode run --model alcf-proxy/inkling-bf16 "Your prompt here"
 
     === "Linux / macOS"
         ```bash
-        export OPENAI_BASE_URL="http://localhost:11445/v1"
+        export OPENAI_BASE_URL="http://localhost:<PORT>/v1"
         export OPENAI_API_KEY="dummy"
         ```
     === "Windows (PowerShell)"
         ```powershell
-        $env:OPENAI_BASE_URL = "http://localhost:11445/v1"
+        $env:OPENAI_BASE_URL = "http://localhost:<PORT>/v1"
         $env:OPENAI_API_KEY = "dummy"
         ```
 

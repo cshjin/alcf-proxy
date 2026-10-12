@@ -6,11 +6,35 @@ from alcf_proxy import config
 def test_defaults_when_no_file(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(config, "config_search_paths", lambda: [str(tmp_path / "none.yaml")])
+    monkeypatch.delenv("ALCF_PROXY_PORT", raising=False)
     cfg = config.load_config()
     assert cfg.host == "127.0.0.1"
-    assert cfg.port == 11445
+    assert cfg.port is None  # no built-in default — must come from .env, config.yaml, or --port
     assert cfg.cluster == "sophia"
     assert cfg.default_model == "openai/gpt-oss-120b"
+
+
+def test_dotenv_file_sets_port(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("ALCF_PROXY_PORT=4321\n")
+    monkeypatch.setattr(config, "config_search_paths", lambda: [str(tmp_path / "none.yaml")])
+    assert "ALCF_PROXY_PORT" not in os.environ
+    # load_dotenv() writes straight to os.environ (bypassing monkeypatch's undo tracking since the
+    # key doesn't exist yet), so clean it up manually rather than leaking it into later tests.
+    try:
+        cfg = config.load_config()
+        assert cfg.port == 4321
+    finally:
+        os.environ.pop("ALCF_PROXY_PORT", None)
+
+
+def test_dotenv_does_not_override_real_env(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("ALCF_PROXY_PORT=4321\n")
+    monkeypatch.setattr(config, "config_search_paths", lambda: [str(tmp_path / "none.yaml")])
+    monkeypatch.setenv("ALCF_PROXY_PORT", "9999")
+    cfg = config.load_config()
+    assert cfg.port == 9999
 
 
 def test_yaml_overrides_defaults(tmp_path, monkeypatch):

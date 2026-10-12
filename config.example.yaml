@@ -5,7 +5,9 @@
 # Precedence: CLI flags > env (ALCF_PROXY_*) > this file > built-in defaults.
 
 host: 127.0.0.1
-port: 11445                 # use a different port than any other local proxy (e.g. argo-proxy)
+# port: 11445               # no built-in default; set ALCF_PROXY_PORT in .env instead (see
+                             # .env.example) so your port isn't baked into a committed file. You can
+                             # still uncomment this line if you don't mind it living in config.yaml.
 cluster: sophia            # primary cluster (used by the fallback chain)
 framework: vllm            # primary framework
 default_model: openai/gpt-oss-120b

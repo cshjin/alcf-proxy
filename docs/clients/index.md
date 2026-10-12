@@ -12,16 +12,22 @@ the matching one, using **any dummy API key** (the proxy injects the real ALCF t
 The base URL is your proxy address:
 
 ```
-http://localhost:11445/v1
+http://localhost:<PORT>/v1
 ```
 
 (For Anthropic clients that append `/v1/messages` themselves, use the host root
-`http://localhost:11445` — see the [Claude Code](claude-code.md) page.)
+`http://localhost:<PORT>` — see the [Claude Code](claude-code.md) page.)
+
+!!! tip "What's `<PORT>`?"
+    alcf-proxy has no built-in default port — `<PORT>` is whatever you set in your local `.env`
+    (`cp .env.example .env`, then set `ALCF_PROXY_PORT`) or passed via `--port`. See
+    [Configuration](../configuration.md).
 
 ## Before you start
 
 1. `alcf-proxy auth login` (once) — see [Authentication](../authentication.md)
-2. `alcf-proxy serve` — keep it running in a terminal (or as a background service)
+2. `.env` set with your port, then `alcf-proxy serve` — keep it running in a terminal (or as a
+   background service)
 
 ## Pick your tool
 

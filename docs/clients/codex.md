@@ -6,7 +6,7 @@ serves at `/v1/responses`.
 ## 1. Make sure the proxy is running
 
 ```bash
-alcf-proxy serve        # http://localhost:11445
+alcf-proxy serve        # http://localhost:<PORT>
 ```
 
 ## 2. Add a model provider to Codex config
@@ -16,7 +16,7 @@ Codex reads `$CODEX_HOME/config.toml` (defaults to `~/.codex/config.toml`). Add 
 ```toml
 [model_providers.alcf]
 name = "ALCF (via alcf-proxy)"
-base_url = "http://localhost:11445/v1"
+base_url = "http://localhost:<PORT>/v1"
 wire_api = "responses"
 # No API key needed — alcf-proxy injects the real ALCF token.
 # If your Codex version requires an env key, point it at a dummy value (see below).
@@ -71,7 +71,7 @@ token:
 ```toml
 [model_providers.alcf]
 name = "ALCF (via alcf-proxy)"
-base_url = "http://localhost:11445/v1"
+base_url = "http://localhost:<PORT>/v1"
 wire_api = "responses"
 env_key = "ALCF_DUMMY_KEY"
 ```

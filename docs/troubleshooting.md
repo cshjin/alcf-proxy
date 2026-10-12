@@ -22,7 +22,7 @@ Almost always the upstream ALCF cluster is unavailable, not real demand. Check:
 
 ```bash
 alcf-proxy health
-curl -s http://localhost:11445/health
+curl -s http://localhost:<PORT>/health
 ```
 
 - If `active_endpoint` shows a cluster that's down, failover should move to the next one on the next
@@ -78,22 +78,23 @@ a 400, the model isn't in the current catalog — run `alcf-proxy models`. Note:
 
 ## Port already in use
 
-Another process (or a stale proxy) holds the port:
+Another process (or a stale proxy) holds the port. Find your configured port with
+`alcf-proxy config show` (or check your `.env`), then:
 
 === "Linux / macOS"
 
     ```bash
-    ss -tlnp | grep 11445     # find the pid
-    kill <pid>                # or choose another port
-    alcf-proxy serve --port 11500
+    ss -tlnp | grep <PORT>     # find the pid
+    kill <pid>                 # or choose another port
+    alcf-proxy serve --port <OTHER_PORT>
     ```
 
 === "Windows (PowerShell)"
 
     ```powershell
-    Get-NetTCPConnection -LocalPort 11445 | Select-Object OwningProcess
+    Get-NetTCPConnection -LocalPort <PORT> | Select-Object OwningProcess
     Stop-Process -Id <pid>
-    alcf-proxy serve --port 11500
+    alcf-proxy serve --port <OTHER_PORT>
     ```
 
 ## Cold start is slow
@@ -105,8 +106,8 @@ requests are fast.
 ## Coexisting with argo-proxy
 
 Run alcf-proxy on a **different port** than argo-proxy (or any other local proxy) so they don't
-collide — alcf-proxy defaults to `11445`; set `--port` if that conflicts. They are independent;
-configuring one never touches the other.
+collide — set your own port in `.env` (`ALCF_PROXY_PORT=...`, see `.env.example`) or `--port`. They
+are independent; configuring one never touches the other.
 
 ## Still stuck?
 

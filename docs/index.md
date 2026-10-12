@@ -37,11 +37,12 @@ none of them know how to fetch/refresh an ALCF Globus token. alcf-proxy sits in 
 
 ```bash
 pip install alcf-proxy
+cp .env.example .env      # pick a port: uncomment ALCF_PROXY_PORT=... (no built-in default)
 alcf-proxy auth login     # one-time Globus browser login
-alcf-proxy serve          # gateway on http://localhost:11445
+alcf-proxy serve          # gateway on http://localhost:<PORT>
 ```
 
-Then point your CLI at `http://localhost:11445/v1` with any dummy API key. See
+Then point your CLI at `http://localhost:<PORT>/v1` with any dummy API key. See
 [Quickstart](quickstart.md) and [Connect a CLI](clients/index.md).
 
 ## Next steps

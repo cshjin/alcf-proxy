@@ -3,9 +3,23 @@
 alcf-proxy is configured by (in order of precedence):
 
 1. **CLI flags** (`--port`, `--host`, `--cluster`, `--framework`, `--model`)
-2. **Environment variables** (`ALCF_PROXY_*`)
+2. **Environment variables** (`ALCF_PROXY_*`), including a local `.env` file (see below)
 3. **YAML config file**
-4. **Built-in defaults**
+4. **Built-in defaults** — note there is **no built-in default port**; see below.
+
+## Port: `.env` file (recommended)
+
+alcf-proxy does not ship with a hardcoded default port, so it's never silently baked into a commit,
+a shared `config.yaml`, or a screenshot. Pick one yourself, once:
+
+```bash
+cp .env.example .env
+$EDITOR .env    # uncomment ALCF_PROXY_PORT=... and set a free port
+```
+
+`.env` is loaded automatically (searched the same way as `config.yaml`: `./.env`, then the platform
+user-config dir) and is listed in `.gitignore`, so it's never committed. Everything in it is just a
+regular `ALCF_PROXY_*` environment variable — see the table below for the full list.
 
 ## Config file
 
@@ -33,7 +47,7 @@ alcf-proxy config show
 
 ```yaml
 host: 127.0.0.1
-port: 11445                 # use a different port than any other proxy you run (e.g. argo-proxy)
+# port: 11445               # optional — prefer setting ALCF_PROXY_PORT in .env instead (see above)
 cluster: sophia            # primary cluster
 framework: vllm            # primary framework
 default_model: openai/gpt-oss-120b
@@ -59,6 +73,9 @@ Every top-level key has an `ALCF_PROXY_<KEY>` override:
 | `ALCF_PROXY_VERBOSE` | `true`/`false` verbose logging |
 | `ALCF_PROXY_CLUSTER_PRIORITY` | comma-separated cluster order for unified routing (e.g. `metis,sophia`) |
 | `ALCF_PROXY_API_KEY` | require this bearer key from clients (needed for non-loopback bind) |
+
+Any of these can be exported directly, or (preferred, so you don't have to re-export every shell
+session) put in `.env` as shown above.
 
 === "Linux / macOS"
 

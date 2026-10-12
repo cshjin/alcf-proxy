@@ -15,7 +15,7 @@ alcf-proxy serve [--host HOST] [--port PORT] [--cluster C] [--framework F] [--mo
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--host` | `127.0.0.1` | Bind host. Non-loopback requires `ALCF_PROXY_API_KEY`. |
-| `--port` | `11445` | Bind port. |
+| `--port` | *(none)* | Bind port. No built-in default — set `ALCF_PROXY_PORT` in `.env` (see [Configuration](configuration.md)), `port:` in `config.yaml`, or pass this flag. |
 | `--cluster` | `sophia` | Primary cluster. |
 | `--framework` | `vllm` | Primary framework. |
 | `--model` | `openai/gpt-oss-120b` | Default model id. |

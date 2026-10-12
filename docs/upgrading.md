@@ -1,5 +1,21 @@
 # Upgrading
 
+## v0.3.0 → v0.3.1
+
+```bash
+pip install -U alcf-proxy
+```
+
+### New in v0.3.1
+
+- **No more hardcoded default port**: `port` has no built-in value anymore. Copy `.env.example` to
+  `.env` and set `ALCF_PROXY_PORT` (or use `--port` / `port:` in `config.yaml` as before). `.env` is
+  gitignored, so your port is never baked into a commit or a shared config file. Running
+  `alcf-proxy serve` with no port configured anywhere now exits with a clear message instead of
+  silently binding `11445`.
+  *Affected:* anyone relying on the old implicit default of `11445` with zero configuration.
+  *Fix:* `cp .env.example .env` once, set a port, done.
+
 ## v0.2.x → v0.3.0
 
 Upgrade via pip:
@@ -33,7 +49,7 @@ alcf-proxy serve
 
 ### What stays compatible
 
-- **Client setup unchanged** — same base URL (`http://localhost:11445/v1`), same dummy API key,
+- **Client setup unchanged** — same base URL (`http://localhost:<PORT>/v1`), same dummy API key,
   same endpoints (`/v1/chat/completions`, `/v1/responses`, `/v1/messages`).
 - **`config.yaml` unchanged** — every v0.1.x key is still valid. The new `cluster_priority` key is
   optional (defaults to `[sophia, metis, minerva]`). An existing explicit `endpoints:` list behaves

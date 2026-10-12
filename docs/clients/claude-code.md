@@ -6,7 +6,7 @@ which alcf-proxy serves at `/v1/messages`.
 ## 1. Start the proxy
 
 ```bash
-alcf-proxy serve        # http://localhost:11445
+alcf-proxy serve        # http://localhost:<PORT>
 ```
 
 ## 2. Point Claude Code at the proxy
@@ -19,7 +19,7 @@ To make your configuration persistent without polluting global environment varia
 {
   "apiKeyHelper": "echo dummy",
   "env": {
-    "ANTHROPIC_BASE_URL": "http://localhost:11445",
+    "ANTHROPIC_BASE_URL": "http://localhost:<PORT>",
     "ANTHROPIC_AUTH_TOKEN": "dummy",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "inkling-bf16[1m]",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "inkling-bf16[1m]",
@@ -36,7 +36,7 @@ Claude Code reads the Anthropic base URL from environment variables. Set the bas
 === "Linux / macOS"
 
     ```bash
-    export ANTHROPIC_BASE_URL="http://localhost:11445"
+    export ANTHROPIC_BASE_URL="http://localhost:<PORT>"
     export ANTHROPIC_API_KEY="dummy"
     claude --model "inkling-bf16[1m]"
     ```
@@ -44,7 +44,7 @@ Claude Code reads the Anthropic base URL from environment variables. Set the bas
 === "Windows (PowerShell)"
 
     ```powershell
-    $env:ANTHROPIC_BASE_URL = "http://localhost:11445"
+    $env:ANTHROPIC_BASE_URL = "http://localhost:<PORT>"
     $env:ANTHROPIC_API_KEY = "dummy"
     claude --model "inkling-bf16[1m]"
     ```
@@ -52,7 +52,7 @@ Claude Code reads the Anthropic base URL from environment variables. Set the bas
 === "Windows (cmd)"
 
     ```bat
-    set ANTHROPIC_BASE_URL=http://localhost:11445
+    set ANTHROPIC_BASE_URL=http://localhost:<PORT>
     set ANTHROPIC_API_KEY=dummy
     claude --model "inkling-bf16[1m]"
     ```

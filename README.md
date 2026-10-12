@@ -103,10 +103,20 @@ see **[docs → Upgrading](https://alcf-proxy.readthedocs.io/en/latest/upgrading
 
 ## Usage
 
+alcf-proxy ships with **no built-in default port** — pick one and set it once, locally:
+
+```bash
+cp .env.example .env
+$EDITOR .env               # uncomment ALCF_PROXY_PORT=... and set your own port
+```
+
+`.env` is gitignored, so your chosen port never ends up in a commit, a shared `config.yaml`, or this
+README. Below, `<PORT>` means whatever you set there (or passed via `--port`).
+
 ```bash
 alcf-proxy auth login                     # one-time Globus browser login
 alcf-proxy auth status                    # authenticated? token path + hours left
-alcf-proxy serve                          # start the gateway (reads config or uses defaults)
+alcf-proxy serve                          # start the gateway (reads .env / config.yaml)
 alcf-proxy serve --port 8080 --host 0.0.0.0
 alcf-proxy serve --cluster metis --framework api --model gpt-oss-120b
 alcf-proxy models                         # list models currently served by ALCF
@@ -120,13 +130,13 @@ alcf-proxy config show                    # print the effective config
 
 ### Claude Code
 
-Point Claude Code to `http://127.0.0.1:11445` using `~/.claude/settings.json` or environment variables:
+Point Claude Code to `http://127.0.0.1:<PORT>` using `~/.claude/settings.json` or environment variables:
 
 ```json
 {
   "apiKeyHelper": "echo dummy",
   "env": {
-    "ANTHROPIC_BASE_URL": "http://127.0.0.1:11445",
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:<PORT>",
     "ANTHROPIC_AUTH_TOKEN": "dummy",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "inkling-bf16[1m]",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "inkling-bf16[1m]",
@@ -151,7 +161,7 @@ model_provider = "alcf"
 
 [model_providers.alcf]
 name = "ALCF"
-base_url = "http://127.0.0.1:11445/v1"
+base_url = "http://127.0.0.1:<PORT>/v1"
 wire_api = "responses"
 env_key = "ALCF_API_KEY"
 ```
@@ -172,7 +182,7 @@ In `~/.config/opencode/opencode.jsonc`:
       "name": "alcf-proxy",
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
-        "baseURL": "http://127.0.0.1:11445/v1"
+        "baseURL": "http://127.0.0.1:<PORT>/v1"
       },
       "models": {
         "inkling-bf16": {
@@ -196,7 +206,7 @@ opencode run --model alcf-proxy/inkling-bf16 "Your prompt here"
 
 ### Other OpenAI-Compatible Clients (Aider, OpenAI SDK)
 
-Set the base URL to `http://127.0.0.1:11445/v1` and use any non-empty API key.
+Set the base URL to `http://127.0.0.1:<PORT>/v1` and use any non-empty API key.
 
 ## Models
 

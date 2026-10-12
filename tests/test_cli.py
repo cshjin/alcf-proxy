@@ -34,6 +34,18 @@ def test_serve_invokes_uvicorn(monkeypatch):
     assert called["port"] == 9999
 
 
+def test_serve_requires_port_when_unset(monkeypatch, capsys):
+    monkeypatch.setattr("alcf_proxy.cli.config.config_search_paths", lambda: [])
+    monkeypatch.setattr("alcf_proxy.cli.config.dotenv_search_paths", lambda: [])
+    monkeypatch.delenv("ALCF_PROXY_PORT", raising=False)
+    started = {"ran": False}
+    monkeypatch.setattr("alcf_proxy.cli.uvicorn.run", lambda app, **kw: started.update(ran=True))
+    rc = cli.main(["serve"])
+    assert rc != 0
+    assert not started["ran"]
+    assert "port" in capsys.readouterr().err.lower()
+
+
 def test_serve_refuses_nonloopback_without_key(monkeypatch, capsys):
     # C4: binding to a non-loopback host exposes the injected ALCF token to the network; refuse
     # unless a proxy API key is configured.
@@ -41,7 +53,7 @@ def test_serve_refuses_nonloopback_without_key(monkeypatch, capsys):
     started = {"ran": False}
     monkeypatch.setattr("alcf_proxy.cli.uvicorn.run",
                         lambda app, **kw: started.update(ran=True))
-    rc = cli.main(["serve", "--host", "0.0.0.0"])
+    rc = cli.main(["serve", "--host", "0.0.0.0", "--port", "8080"])
     assert rc != 0
     assert not started["ran"]
     assert "loopback" in capsys.readouterr().err.lower() or "0.0.0.0" in capsys.readouterr().err
