@@ -21,25 +21,24 @@ Bearer-authenticated gateway (not ANL ARGO), and the proxy manages ALCF's rotati
 - **Speaks 3 client formats** on one instance:
   - `/v1/chat/completions` — OpenAI SDK, Aider, OpenCode
   - `/v1/responses` — Codex CLI
-  - `/v1/messages` — Claude Code
-- **Translates** every request to ALCF's streaming `chat/completions` upstream via
-  [llm-rosetta](https://github.com/Oaklight/llm-rosetta), and translates the streamed reply back to
-  the client's format — real token-by-token streaming.
+  - `/v1/messages` — Claude Code (full SSE `event:`/`data:` protocol & non-streaming support)
+- **Translates & Bridges**: translates requests to ALCF's streaming `chat/completions` upstream via
+  [llm-rosetta](https://github.com/Oaklight/llm-rosetta), and translates replies back to
+  the client's format — real token-by-token streaming, reasoning delta extraction, and non-streaming fallback.
 - **Manages the ALCF token**: authenticates via Globus (built in — no external script needed),
+  detects and reuses existing tokens from the official `alcf-tokens` CLI (`7f3e61f5-...`) or built-in storage,
   injects the token as a Bearer header, and refreshes automatically when it nears its ~48h expiry.
-  Clients just use a dummy key.
-- **Unified model routing** (v0.2.0): one pool across all ALCF clusters (Sophia, Metis, Minerva).
+- **Unified model routing & suffix cleaning**: one pool across all ALCF clusters (Sophia, Metis, Minerva).
   Request any model id — the proxy resolves which cluster serves it (remapping per-cluster ids like
-  `openai/gpt-oss-120b` vs `gpt-oss-120b`), sticks to a working cluster, and **fails over
-  automatically** on 503/maintenance. No per-cluster configuration, ever.
+  `openai/gpt-oss-120b` vs `gpt-oss-120b`), automatically strips context window tags (like `inkling-bf16[1m]` -> `inkling-bf16`),
+  normalizes prefixes (like `alcf:inkling`), sticks to a working cluster, and **fails over automatically** on 503/maintenance.
 
 ## Prerequisites
 
 - **Python ≥ 3.10.** All auth is built in (via `globus-sdk`, installed automatically); you do **not**
-  need ALCF's `inference_auth_token.py`.
+  need ALCF's deprecated `inference_auth_token.py`.
 - **First-time login** (once): `alcf-proxy auth login` — opens a browser for Globus OAuth and stores
-  the token in globus-sdk's standard per-platform location (resolved correctly on Linux/macOS/Windows;
-  check it any time with `alcf-proxy auth status`). The refresh token then lasts months.
+  the token in globus-sdk's standard per-platform location (or run `alcf-tokens login inference` via the official `alcf-tokens` package; `alcf-proxy` automatically detects both).
 
 ## Install
 
@@ -119,20 +118,85 @@ alcf-proxy config show                    # print the effective config
 
 ### Point your CLI at it
 
-Codex (`~/.codex/config.toml` or `$CODEX_HOME/config.toml`):
+### Claude Code
 
-```toml
-[model_providers.alcf]
-name = "ALCF (via alcf-proxy)"
-base_url = "http://localhost:11445/v1"
-wire_api = "responses"
-# no api key needed — the proxy injects the real ALCF token; set a dummy if the client requires one
+Point Claude Code to `http://127.0.0.1:11445` using `~/.claude/settings.json` or environment variables:
+
+```json
+{
+  "apiKeyHelper": "echo dummy",
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:11445",
+    "ANTHROPIC_AUTH_TOKEN": "dummy",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "inkling-bf16[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "inkling-bf16[1m]",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "inkling-bf16[1m]"
+  }
+}
 ```
 
-Any OpenAI-compatible client (Aider, OpenCode, OpenAI SDK): set the base URL to
-`http://localhost:11445/v1` and any non-empty API key.
+Or run via command line:
+```bash
+claude --model "inkling-bf16[1m]"
+```
+*(The `[1m]` suffix informs Claude Code of the 1,048,576 token context window; `alcf-proxy` automatically strips this tag before routing to Minerva `inkling-bf16`.)*
 
-Claude Code: set the Anthropic base URL to `http://localhost:11445` and any dummy key.
+### OpenAI Codex
+
+In `~/.codex/config.toml`:
+
+```toml
+model = "inkling-bf16"
+model_provider = "alcf"
+
+[model_providers.alcf]
+name = "ALCF"
+base_url = "http://127.0.0.1:11445/v1"
+wire_api = "responses"
+env_key = "ALCF_API_KEY"
+```
+
+Then run:
+```bash
+ALCF_API_KEY=dummy codex
+```
+
+### OpenCode
+
+In `~/.config/opencode/opencode.jsonc`:
+
+```jsonc
+{
+  "providers": {
+    "alcf-proxy": {
+      "name": "alcf-proxy",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://127.0.0.1:11445/v1"
+      },
+      "models": {
+        "inkling-bf16": {
+          "modelID": "inkling-bf16",
+          "name": "inkling-bf16"
+        },
+        "gpt-oss-120b": {
+          "modelID": "gpt-oss-120b",
+          "name": "gpt-oss-120b"
+        }
+      }
+    }
+  }
+}
+```
+
+Then run:
+```bash
+opencode run --model alcf-proxy/inkling-bf16 "Your prompt here"
+```
+
+### Other OpenAI-Compatible Clients (Aider, OpenAI SDK)
+
+Set the base URL to `http://127.0.0.1:11445/v1` and use any non-empty API key.
 
 ## Models
 
@@ -158,8 +222,8 @@ default.
 | `mistralai/{Mistral-Large-2407,Devstral-2-123B,Mixtral-8x22B}` | | | | |
 
 Metis (`metis/api`, no `openai/` prefix, all always-hot; no batch/tools): `gpt-oss-120b` ⭐,
-`Mistral-Large-3-675B-Instruct-2512`, `gemma-4-31B-it`. Minerva (`minerva/api`, NVIDIA B200, new):
-`nemotron-3-ultra` (always hot).
+`Mistral-Large-3-675B-Instruct-2512`, `gemma-4-31B-it`. Minerva (`minerva/api`, NVIDIA B200):
+`inkling-bf16` (1,048,576 tokens / 1M context window, native messages & thinking), `nemotron-3-ultra`, `gpt-oss-120b`.
 
 Also on Sophia: vision (`meta-llama/Llama-3.2-90B-Vision-Instruct`), embeddings
 (`Salesforce/SFR-Embedding-Mistral`, `genslm-*`), and segmentation (`facebook/sam3`). Full table with
