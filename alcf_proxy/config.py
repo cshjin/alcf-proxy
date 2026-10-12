@@ -50,6 +50,10 @@ class Config:
     def as_dict(self) -> dict:
         return dict(self._v)
 
+    def set_port(self, port: int) -> None:
+        """Used by the CLI's first-run port prompt to fill in a port chosen interactively."""
+        self._v["port"] = port
+
     def has_explicit_endpoints(self) -> bool:
         """True when the user pinned an explicit `endpoints:` list (bypasses the model router)."""
         return bool(self._v.get("endpoints"))
@@ -131,3 +135,14 @@ def init_config(path: str, values: dict) -> None:
     merged.update(values)
     with open(path, "w") as f:
         yaml.safe_dump(merged, f, sort_keys=False)
+
+
+def save_dotenv_port(port: int) -> str:
+    """Persist a port chosen at the first-run prompt into the user's .env (creating it if needed),
+    so later runs don't ask again. Appends rather than rewriting, in case other settings are already
+    there. Returns the path written."""
+    path = os.path.join(user_config_dir("alcf-proxy"), ".env")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a") as f:
+        f.write(f"ALCF_PROXY_PORT={port}\n")
+    return path

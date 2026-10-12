@@ -11,6 +11,10 @@ import uvicorn
 from . import alcf_auth, auth, config, endpoints
 from .server import build_app
 
+# Only used as the pre-filled suggestion in the interactive first-run prompt below — not a default
+# that's ever applied silently (see config.py: DEFAULTS["port"] is None).
+PROMPT_DEFAULT_PORT = 52227
+
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -45,9 +49,19 @@ def main(argv: list[str] | None = None) -> int:
         overrides = {k: getattr(ns, k) for k in ("host", "port", "cluster", "framework", "default_model")}
         cfg = config.load_config(cli_overrides=overrides, path=ns.config)
         if cfg.port is None:
-            print("alcf-proxy: no port configured. Copy .env.example to .env and set "
-                  "ALCF_PROXY_PORT (or pass --port, or set `port:` in config.yaml).", file=sys.stderr)
-            return 1
+            if not _interactive():
+                print("alcf-proxy: no port configured. Copy .env.example to .env and set "
+                      "ALCF_PROXY_PORT (or pass --port, or set `port:` in config.yaml).",
+                      file=sys.stderr)
+                return 1
+            port = _prompt_for_port()
+            if port is None:
+                print("alcf-proxy: no port chosen, exiting.", file=sys.stderr)
+                return 1
+            saved_path = config.save_dotenv_port(port)
+            print(f"alcf-proxy: saved ALCF_PROXY_PORT={port} to {saved_path} "
+                  "(future runs won't ask again).")
+            cfg.set_port(port)
         # Security: the proxy injects the real ALCF token for every caller. Binding to a non-loopback
         # host would expose that token to the network, so refuse unless an inbound API key is set.
         if not _is_loopback(cfg.host) and not os.environ.get("ALCF_PROXY_API_KEY"):
@@ -62,8 +76,11 @@ def main(argv: list[str] | None = None) -> int:
             print(str(e), file=sys.stderr)
             return 1
         app = build_app(cfg, tm)
+        # 0.0.0.0/:: are bind addresses, not something you can curl — show a connectable host instead.
+        probe_host = "localhost" if cfg.host in ("0.0.0.0", "::") else cfg.host
         print(f"alcf-proxy serving on http://{cfg.host}:{cfg.port} "
               f"({cfg.cluster}/{cfg.framework})", flush=True)
+        print(f"  -> check it's up:  curl http://{probe_host}:{cfg.port}/health", flush=True)
         uvicorn.run(app, host=cfg.host, port=cfg.port,
                     log_level="info" if cfg.verbose else "warning")
         return 0
@@ -124,3 +141,26 @@ def yaml_dump(d: dict) -> str:
 
 def _is_loopback(host: str) -> bool:
     return host in ("127.0.0.1", "::1", "localhost")
+
+
+def _interactive() -> bool:
+    return sys.stdin.isatty()
+
+
+def _prompt_for_port(default: int = PROMPT_DEFAULT_PORT) -> int | None:
+    """First-run prompt: ask for a port, pre-filled with `default`. Returns None on Ctrl-C/EOF."""
+    print("alcf-proxy: no port configured yet. (Set ALCF_PROXY_PORT in .env — see .env.example — "
+          "to skip this prompt next time.)")
+    try:
+        raw = input(f"Port to listen on [{default}]: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        print(f"alcf-proxy: {raw!r} is not a valid port number; using the default {default}.",
+              file=sys.stderr)
+        return default

@@ -103,15 +103,32 @@ see **[docs → Upgrading](https://alcf-proxy.readthedocs.io/en/latest/upgrading
 
 ## Usage
 
-alcf-proxy ships with **no built-in default port** — pick one and set it once, locally:
+alcf-proxy ships with **no built-in default port**. First run with none configured, it asks you
+interactively (pre-filled with a suggestion — just press Enter to accept) and remembers the answer
+in a local `.env` so you're never asked again:
+
+```bash
+alcf-proxy serve
+```
+
+```text
+alcf-proxy: no port configured yet. (Set ALCF_PROXY_PORT in .env — see .env.example — to skip this
+prompt next time.)
+Port to listen on [52227]:
+alcf-proxy: saved ALCF_PROXY_PORT=52227 to /…/alcf-proxy/.env (future runs won't ask again).
+alcf-proxy serving on http://127.0.0.1:52227 (sophia/vllm)
+  -> check it's up:  curl http://127.0.0.1:52227/health
+```
+
+Prefer to set it up front (or running non-interactively, e.g. in a service unit)? Copy the template:
 
 ```bash
 cp .env.example .env
 $EDITOR .env               # uncomment ALCF_PROXY_PORT=... and set your own port
 ```
 
-`.env` is gitignored, so your chosen port never ends up in a commit, a shared `config.yaml`, or this
-README. Below, `<PORT>` means whatever you set there (or passed via `--port`).
+Either way, `.env` is gitignored, so your chosen port never ends up in a commit, a shared
+`config.yaml`, or this README. Below, `<PORT>` means whatever you set (or passed via `--port`).
 
 ```bash
 alcf-proxy auth login                     # one-time Globus browser login

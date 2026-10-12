@@ -11,23 +11,32 @@ alcf-proxy auth login      # one-time, opens a browser
 
 ## 2. Pick a port & start the proxy
 
-alcf-proxy ships with **no built-in default port** — copy the template and set your own, once:
-
-```bash
-cp .env.example .env
-$EDITOR .env               # uncomment ALCF_PROXY_PORT=... and set a free port
-```
-
-`.env` is gitignored, so this never ends up in a commit or a shared `config.yaml`. The rest of the
-docs write `<PORT>` for whatever you chose here (or passed via `--port`).
+alcf-proxy ships with **no built-in default port**. The first time you run `serve` with none
+configured, it asks interactively (pre-filled with a suggested port — just press Enter to accept it)
+and remembers your answer for next time:
 
 ```bash
 alcf-proxy serve
 ```
 
 ```text
-alcf-proxy serving on http://127.0.0.1:<PORT> (sophia/vllm)
+alcf-proxy: no port configured yet. (Set ALCF_PROXY_PORT in .env — see .env.example — to skip this
+prompt next time.)
+Port to listen on [52227]:
+alcf-proxy: saved ALCF_PROXY_PORT=52227 to /…/alcf-proxy/.env (future runs won't ask again).
+alcf-proxy serving on http://127.0.0.1:52227 (sophia/vllm)
+  -> check it's up:  curl http://127.0.0.1:52227/health
 ```
+
+Prefer to set it up front instead of being asked? Copy the template and edit it:
+
+```bash
+cp .env.example .env
+$EDITOR .env               # uncomment ALCF_PROXY_PORT=... and set a free port
+```
+
+Either way, `.env` is gitignored, so your port never ends up in a commit or a shared `config.yaml`.
+The rest of the docs write `<PORT>` for whatever you chose (or passed via `--port`).
 
 By default it binds `127.0.0.1` with **unified model routing**: request any model from
 `alcf-proxy models` and the proxy resolves which cluster (Sophia / Metis / Minerva) serves it,

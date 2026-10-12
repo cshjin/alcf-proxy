@@ -1,5 +1,23 @@
 # Upgrading
 
+## v0.3.1 → v0.3.2
+
+```bash
+pip install -U alcf-proxy
+```
+
+### New in v0.3.2
+
+- **Interactive first-run port prompt**: if `serve` finds no port configured anywhere *and* you're at
+  an interactive terminal, it now asks once (pre-filled with a suggested port — press Enter to accept)
+  instead of exiting with an error, and saves your answer to `.env` in the platform user-config dir so
+  you're never asked again. Non-interactive runs (service units, CI, containers) are unaffected —
+  they still get the same clear error as v0.3.1 if nothing is configured.
+- **`curl .../health` hint on startup**: the `serve` banner now prints a ready-to-paste
+  `curl http://<host>:<port>/health` line (using `localhost` instead of `0.0.0.0`/`::` when bound
+  wildcard) so you can quickly check the proxy came up, mirroring what argo-proxy shows.
+  *Affected:* nobody — purely additive, no behavior change for existing configured setups.
+
 ## v0.3.0 → v0.3.1
 
 ```bash

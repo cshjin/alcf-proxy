@@ -71,6 +71,23 @@ def test_init_config_writes_yaml(tmp_path):
     assert loaded["port"] == 1234
 
 
+def test_save_dotenv_port_writes_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "user_config_dir", lambda name: str(tmp_path / "alcf-proxy"))
+    path = config.save_dotenv_port(9123)
+    assert path == str(tmp_path / "alcf-proxy" / ".env")
+    assert "ALCF_PROXY_PORT=9123" in open(path).read()
+
+
+def test_save_dotenv_port_appends_to_existing(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "user_config_dir", lambda name: str(tmp_path / "alcf-proxy"))
+    (tmp_path / "alcf-proxy").mkdir()
+    (tmp_path / "alcf-proxy" / ".env").write_text("ALCF_PROXY_HOST=0.0.0.0\n")
+    path = config.save_dotenv_port(9123)
+    content = open(path).read()
+    assert "ALCF_PROXY_HOST=0.0.0.0" in content
+    assert "ALCF_PROXY_PORT=9123" in content
+
+
 def test_endpoints_synthesized_from_primary_plus_defaults():
     cfg = config.Config({"cluster": "sophia", "framework": "vllm",
                          "default_model": "openai/gpt-oss-120b"})

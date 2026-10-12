@@ -10,7 +10,19 @@ alcf-proxy is configured by (in order of precedence):
 ## Port: `.env` file (recommended)
 
 alcf-proxy does not ship with a hardcoded default port, so it's never silently baked into a commit,
-a shared `config.yaml`, or a screenshot. Pick one yourself, once:
+a shared `config.yaml`, or a screenshot.
+
+**Easiest:** just run `alcf-proxy serve`. If no port is configured anywhere and you're at an
+interactive terminal, it asks once (with a pre-filled suggestion — press Enter to accept) and writes
+the answer to `.env` in the platform user-config dir, so you're never asked again:
+
+```text
+Port to listen on [52227]:
+alcf-proxy: saved ALCF_PROXY_PORT=52227 to /…/alcf-proxy/.env (future runs won't ask again).
+```
+
+Running non-interactively (a service unit, CI, a container)? There's nothing to prompt, so set it up
+front instead:
 
 ```bash
 cp .env.example .env
@@ -47,7 +59,7 @@ alcf-proxy config show
 
 ```yaml
 host: 127.0.0.1
-# port: 11445               # optional — prefer setting ALCF_PROXY_PORT in .env instead (see above)
+# port: 52227               # optional — prefer setting ALCF_PROXY_PORT in .env instead (see above)
 cluster: sophia            # primary cluster
 framework: vllm            # primary framework
 default_model: openai/gpt-oss-120b
