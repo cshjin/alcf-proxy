@@ -11,29 +11,38 @@ alcf-proxy serve        # http://localhost:11445
 
 ## 2. Configure an OpenAI-compatible provider
 
-OpenCode is configured via `opencode.json` (project root) or `~/.config/opencode/opencode.json`. Add
-a custom provider that points at the proxy:
+OpenCode is configured via `opencode.jsonc` (project root) or `~/.config/opencode/opencode.jsonc`. Add
+a custom provider pointing to the proxy:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "alcf": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "ALCF (via alcf-proxy)",
-      "options": {
-        "baseURL": "http://localhost:11445/v1",
-        "apiKey": "dummy"
+  "providers": {
+    "alcf-proxy": {
+      "name": "alcf-proxy",
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://localhost:11445/v1"
       },
       "models": {
-        "openai/gpt-oss-120b": { "name": "gpt-oss-120b (ALCF)" }
+        "inkling-bf16": {
+          "modelID": "inkling-bf16",
+          "name": "inkling-bf16"
+        },
+        "gpt-oss-120b": {
+          "modelID": "gpt-oss-120b",
+          "name": "gpt-oss-120b"
+        }
       }
     }
   }
 }
 ```
 
-Then select the model in OpenCode (e.g. `alcf/openai/gpt-oss-120b`).
+Then run OpenCode with the model:
+```bash
+opencode run --model alcf-proxy/inkling-bf16 "Your prompt here"
+```
 
 ## Cross-platform config location
 

@@ -35,6 +35,11 @@ exact path. Typical locations:
 | macOS | `~/.globus/app/.../inference_app/tokens.json` |
 | Windows | under `%LOCALAPPDATA%` |
 
+!!! tip "Compatibility with official `alcf-tokens`"
+    If you already authenticated using ALCF's official PyPI tool via `alcf-tokens login inference`,
+    `alcf-proxy` automatically detects and reuses that token store (`~/.globus/app/7f3e61f5-.../alcf_tokens/tokens.json`),
+    so no duplicate login is required.
+
 !!! warning "Keep the token private"
     The refresh token is a long-lived credential. Never commit `tokens.json` to git or copy it to a
     shared directory. On Unix it is created with `-rw-------` (owner-only) — keep it that way.

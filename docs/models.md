@@ -97,11 +97,15 @@ completions, embeddings.
 |-------|:-:|:-:|:-:|:-:|
 | ⭐ **gpt-oss-120b** | | | | |
 | nemotron-3-ultra | | | | ✅ |
-| inkling-bf16 | | | | |
+| **inkling-bf16** | | ✅ | ✅ | |
 
-(Live catalog 2026-08-21; minerva now serves `gpt-oss-120b` too, so the recommended model gets
-**three-cluster failover**. ALCF's published feature flags for minerva currently cover only
-`nemotron-3-ultra`.)
+`inkling-bf16` features:
+- **1,048,576 (1M) context window** (use `inkling-bf16[1m]` with Claude Code).
+- **Thinking / Reasoning support** with interleaved reasoning deltas.
+- **Tool calling support**.
+- Direct availability across chat, responses, and messages endpoints.
+
+(Minerva now serves `gpt-oss-120b` too, providing three-cluster failover for the recommended model.)
 
 ## Notes
 

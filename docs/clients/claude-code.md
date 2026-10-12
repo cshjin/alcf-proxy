@@ -11,6 +11,25 @@ alcf-proxy serve        # http://localhost:11445
 
 ## 2. Point Claude Code at the proxy
 
+### Option A: Configuration file (`~/.claude/settings.json`)
+
+To make your configuration persistent without polluting global environment variables, configure `~/.claude/settings.json`:
+
+```json
+{
+  "apiKeyHelper": "echo dummy",
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:11445",
+    "ANTHROPIC_AUTH_TOKEN": "dummy",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "inkling-bf16[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "inkling-bf16[1m]",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "inkling-bf16[1m]"
+  }
+}
+```
+
+### Option B: Environment variables
+
 Claude Code reads the Anthropic base URL from environment variables. Set the base URL to the proxy's
 **host root** (Claude Code appends `/v1/messages` itself) and use a dummy key:
 
@@ -19,7 +38,7 @@ Claude Code reads the Anthropic base URL from environment variables. Set the bas
     ```bash
     export ANTHROPIC_BASE_URL="http://localhost:11445"
     export ANTHROPIC_API_KEY="dummy"
-    claude
+    claude --model "inkling-bf16[1m]"
     ```
 
 === "Windows (PowerShell)"
@@ -27,7 +46,7 @@ Claude Code reads the Anthropic base URL from environment variables. Set the bas
     ```powershell
     $env:ANTHROPIC_BASE_URL = "http://localhost:11445"
     $env:ANTHROPIC_API_KEY = "dummy"
-    claude
+    claude --model "inkling-bf16[1m]"
     ```
 
 === "Windows (cmd)"
@@ -35,22 +54,24 @@ Claude Code reads the Anthropic base URL from environment variables. Set the bas
     ```bat
     set ANTHROPIC_BASE_URL=http://localhost:11445
     set ANTHROPIC_API_KEY=dummy
-    claude
+    claude --model "inkling-bf16[1m]"
     ```
 
-To make it persistent, add those exports to your shell profile (`~/.bashrc`, `~/.zshrc`) or set them
-as user environment variables on Windows.
+## Choosing the model & Context window `[1m]` syntax
 
-## Choosing the model
+Minerva serves `inkling-bf16` with a **1,048,576 token (1M) context window**, tool calling, and thinking token support.
 
-alcf-proxy forwards to its configured ALCF model (default `openai/gpt-oss-120b`). If you want a
-specific model and your Claude Code version lets you set one, use the id for the active cluster
-(`alcf-proxy models` lists them). Otherwise the proxy's `default_model` / active endpoint is used.
+Claude Code allows specifying context window size by appending `[1m]`, `[200k]`, etc. to custom model names:
+```bash
+claude --model "inkling-bf16[1m]"
+```
+
+- **Client side**: Claude Code uses `[1m]` to allocate a 1M token budget and avoids truncating context to the default 200k tokens.
+- **Proxy side**: `alcf-proxy` automatically detects and strips `[1m]` (and similar suffix tags like `[200k]` or `alcf:` prefixes), routing cleanly to the upstream cluster's `inkling-bf16` model.
+- **Failback support**: Claude Code may internally invoke subagents or summary calls using `claudesonnet5` or `claude-3-5-haiku`. You can set `ALCF_PROXY_UNKNOWN_MODEL_FALLBACK="inkling-bf16"` so any unrecognized model names seamlessly fall back to your preferred model.
 
 !!! note "How translation works"
-    Claude Code sends Anthropic Messages requests; alcf-proxy converts them to ALCF's streaming chat
-    upstream and converts the streamed reply back into Anthropic SSE events (`message_start` →
-    `content_block_delta` → `message_stop`). This is all automatic.
+    Claude Code sends Anthropic Messages requests with streaming SSE; alcf-proxy converts them to ALCF upstream requests and converts streamed replies back into Anthropic SSE event frames (`event: message_start` → `event: content_block_delta` → `event: message_stop`). If Claude Code ever falls back to non-streaming requests (`stream: false`), the proxy aggregates upstream chunks into a standard Anthropic Message JSON response.
 
 ## Don't disturb an existing argo / default setup
 
