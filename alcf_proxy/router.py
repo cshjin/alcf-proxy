@@ -14,6 +14,7 @@ endpoint cannot stall every request.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 from typing import Callable
@@ -23,13 +24,26 @@ from .upstream import EndpointSelector
 
 log = logging.getLogger("alcf_proxy.router")
 
+COMMON_ALIASES = {
+    "inkling": "inkling-bf16",
+}
+
 
 class UnknownModelError(Exception):
     """The requested model is not served by any ALCF cluster (per current catalog)."""
 
 
+def normalize_model_name(model_id: str) -> str:
+    """Strip context-window suffix tags like [1m], [200k], etc."""
+    return re.sub(r"\[\d+[kKmM]?\]$", "", model_id.strip())
+
+
 def _basename(model_id: str) -> str:
-    return model_id.rsplit("/", 1)[-1].casefold()
+    cleaned = normalize_model_name(model_id)
+    if cleaned.casefold().startswith("alcf:"):
+        cleaned = cleaned[5:]
+    base = cleaned.rsplit("/", 1)[-1].casefold()
+    return COMMON_ALIASES.get(base, base)
 
 
 class ModelRouter:
@@ -39,11 +53,13 @@ class ModelRouter:
         ttl_s: float = 600,
         retry_backoff_s: float = 30,
         fetch: Callable[[str], dict] | None = None,
+        unknown_model_fallback: str | None = None,
     ):
         self._priority = list(cluster_priority)
         self._ttl = ttl_s
         self._backoff = retry_backoff_s
         self._fetch = fetch or endpoints.fetch_list_endpoints
+        self._unknown_fallback = unknown_model_fallback
         self._lock = threading.Lock()
         self._table: list[dict] | None = None  # [{cluster, framework, model}]
         self._fetched_at: float = 0.0
@@ -110,7 +126,8 @@ class ModelRouter:
     def routes_for(self, model: str, token: str) -> list[dict]:
         """Ordered [{cluster, framework, model}] serving `model` (exact id or basename alias)."""
         table = self._ensure_table(token)
-        want, want_base = model.casefold(), _basename(model)
+        cleaned_model = normalize_model_name(model)
+        want, want_base = cleaned_model.casefold(), _basename(cleaned_model)
         exact = [e for e in table if e["model"].casefold() == want]
         seen = {(e["cluster"], e["framework"]) for e in exact}
         base = [e for e in table
@@ -118,6 +135,9 @@ class ModelRouter:
                 and (e["cluster"], e["framework"]) not in seen]
         routes = exact + base
         if not routes:
+            if self._unknown_fallback and model != self._unknown_fallback:
+                log.warning("Unknown model %r requested; falling back to %r", model, self._unknown_fallback)
+                return self.routes_for(self._unknown_fallback, token)
             raise UnknownModelError(
                 f"Model {model!r} is not served by any ALCF cluster. "
                 "Run `alcf-proxy models` to list available models.")
@@ -131,7 +151,7 @@ class ModelRouter:
         Rebuilt automatically if the routing table changes for this model.
         """
         routes = self.routes_for(model, token)
-        key = model.casefold()
+        key = normalize_model_name(model).casefold()
         sig = tuple((e["cluster"], e["framework"], e["model"]) for e in routes)
         with self._lock:
             cached = self._selectors.get(key)

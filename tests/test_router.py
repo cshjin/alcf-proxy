@@ -155,3 +155,43 @@ def test_selector_for_is_cached_and_sticky_capable():
     s2 = r.selector_for("gpt-oss-120b", "T")
     assert s1 is s2  # cached -> sticky state survives across requests
     assert s1.active()["cluster"] == "sophia"
+
+
+def test_context_window_suffix_and_aliases():
+    payload = {
+        "clusters": {
+            "minerva": {"frameworks": {"api": {"models": ["inkling-bf16"]}}},
+            "sophia": {"frameworks": {"vllm": {"models": ["openai/gpt-oss-120b"]}}},
+        }
+    }
+    r, _ = _mk(payload=payload)
+    # [1m] context window suffix (Claude Code style)
+    routes = r.routes_for("inkling-bf16[1m]", "T")
+    assert routes[0]["model"] == "inkling-bf16"
+    assert routes[0]["cluster"] == "minerva"
+
+    # [200k] suffix
+    routes2 = r.routes_for("openai/gpt-oss-120b[200k]", "T")
+    assert routes2[0]["model"] == "openai/gpt-oss-120b"
+
+    # alcf: provider prefix
+    routes3 = r.routes_for("alcf:inkling-bf16", "T")
+    assert routes3[0]["model"] == "inkling-bf16"
+
+    # inkling alias -> inkling-bf16
+    routes4 = r.routes_for("inkling", "T")
+    assert routes4[0]["model"] == "inkling-bf16"
+
+
+def test_unknown_model_fallback():
+    payload = {
+        "clusters": {
+            "minerva": {"frameworks": {"api": {"models": ["inkling-bf16"]}}},
+        }
+    }
+    def fetch(token):
+        return payload
+    r = ModelRouter(fetch=fetch, unknown_model_fallback="inkling-bf16")
+    routes = r.routes_for("claude-3-5-sonnet-20241022", "T")
+    assert routes[0]["model"] == "inkling-bf16"
+

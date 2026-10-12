@@ -16,6 +16,7 @@ DEFAULTS = {
     # Cluster order used by the unified model router when several clusters serve a model,
     # and by the built-in failover chain.
     "cluster_priority": ["sophia", "metis", "minerva"],
+    "unknown_model_fallback": None,
 }
 _ENV_PREFIX = "ALCF_PROXY_"
 _INT_KEYS = {"port"}
