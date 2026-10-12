@@ -1,5 +1,25 @@
 # Upgrading
 
+## v0.2.x → v0.3.0
+
+Upgrade via pip:
+
+```bash
+pip install -U alcf-proxy
+# then restart the proxy:
+alcf-proxy serve
+```
+
+### New in v0.3.0
+
+- **Claude Code & Anthropic Messages streaming**: SSE events now emit standard `event: {type}` headers and clean termination, fully compatible with `@anthropic-ai/sdk`.
+- **Non-streaming response fallback**: automatically aggregates streaming chunks into complete JSON responses when `stream: false`, ensuring resilience on client retries.
+- **Model context window syntax**: automatically strips `[1m]`, `[200k]`, etc. from model names (e.g. `inkling-bf16[1m]` -> `inkling-bf16`).
+- **Minerva `inkling-bf16` support**: full support for 1M context window and thinking/reasoning deltas on Minerva.
+- **`alcf-tokens` compatibility**: automatically detects and shares existing login tokens created by the official `alcf-tokens` CLI (`7f3e61f5-...`).
+- **`unknown_model_fallback` option**: permits automatic fallback to a designated model when clients request unrecognized models.
+- **Upgraded `llm-rosetta`** to `>=0.13.0`.
+
 ## v0.1.x → v0.2.0
 
 **TL;DR: no migration work for typical setups.** Client configs (Codex / Claude Code / OpenCode /
