@@ -6,8 +6,22 @@ def test_frame():
     assert out == b'data: {"type": "x", "n": 1}\n\n'
 
 
+def test_frame_anthropic():
+    out = sse.sse_frame({"type": "message_start", "message": {}}, frontend="anthropic")
+    assert out.startswith(b"event: message_start\ndata: ")
+    assert out.endswith(b"\n\n")
+
+
+def test_frame_responses():
+    out = sse.sse_frame({"type": "response.output_text.delta", "delta": "hi"}, frontend="responses")
+    assert out.startswith(b"event: response.output_text.delta\ndata: ")
+    assert out.endswith(b"\n\n")
+
+
 def test_done():
     assert sse.sse_done() == b"data: [DONE]\n\n"
+    assert sse.sse_done("responses") == b"data: [DONE]\n\n"
+    assert sse.sse_done("anthropic") == b""
 
 
 def test_parse_data_line():

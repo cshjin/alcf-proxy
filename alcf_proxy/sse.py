@@ -4,11 +4,20 @@ from __future__ import annotations
 import json
 
 
-def sse_frame(payload: dict) -> bytes:
+def sse_frame(payload: dict, frontend: str = "chat") -> bytes:
+    if frontend == "anthropic":
+        ev_type = payload.get("type", "message_delta")
+        return f"event: {ev_type}\ndata: {json.dumps(payload)}\n\n".encode()
+    if frontend == "responses":
+        ev_type = payload.get("type")
+        if ev_type:
+            return f"event: {ev_type}\ndata: {json.dumps(payload)}\n\n".encode()
     return f"data: {json.dumps(payload)}\n\n".encode()
 
 
-def sse_done() -> bytes:
+def sse_done(frontend: str = "chat") -> bytes:
+    if frontend == "anthropic":
+        return b""
     return b"data: [DONE]\n\n"
 
 
