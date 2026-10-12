@@ -23,7 +23,10 @@ def build_app(cfg, token_manager) -> FastAPI:
     fallback_selector = upstream.EndpointSelector(cfg.endpoints())
     # Unified model router: resolves the requested model to whichever cluster(s) serve it, so
     # clients never need per-cluster configuration. An explicit `endpoints:` config bypasses it.
-    model_router = router_mod.ModelRouter(cluster_priority=cfg.cluster_priority)
+    model_router = router_mod.ModelRouter(
+        cluster_priority=cfg.cluster_priority,
+        unknown_model_fallback=getattr(cfg, "unknown_model_fallback", None),
+    )
     use_router = not cfg.has_explicit_endpoints()
 
     # Inbound auth: when ALCF_PROXY_API_KEY is set, every request (except /health) must present it.
@@ -61,6 +64,7 @@ def build_app(cfg, token_manager) -> FastAPI:
                 body = await request.json()
             except Exception:  # noqa: BLE001
                 return JSONResponse(status_code=400, content={"error": "invalid JSON body"})
+            is_stream = bool(body.get("stream", False))
             chat_body = spec.sanitize(translate.to_chat_request(spec.name, body))
 
             # Token fetch, routing (may hit the catalog), and the first-chunk probe are all
@@ -82,12 +86,22 @@ def build_app(cfg, token_manager) -> FastAPI:
             except upstream.UpstreamError as e:
                 return JSONResponse(status_code=502, content={"error": str(e)})
 
+            if not is_stream:
+                def _collect():
+                    buffered = () if first is _SENTINEL else (first,)
+                    all_chunks = list(itertools.chain(buffered, chunks))
+                    return translate.response_to_frontend(spec.name, all_chunks)
+                res = await run_in_threadpool(_collect)
+                return JSONResponse(content=res)
+
             def gen():
                 buffered = () if first is _SENTINEL else (first,)
                 for payload in translate.stream_to_frontend(
                         spec.name, itertools.chain(buffered, chunks)):
-                    yield sse.sse_frame(payload)
-                yield sse.sse_done()
+                    yield sse.sse_frame(payload, frontend=spec.name)
+                done = sse.sse_done(frontend=spec.name)
+                if done:
+                    yield done
             return StreamingResponse(gen(), media_type="text/event-stream")
         return route
 

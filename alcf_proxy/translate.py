@@ -60,3 +60,77 @@ def stream_to_frontend(frontend: str, chat_chunks) -> Iterator[dict]:
     if not saw_stream_end:
         for payload in _emit(target, _S.StreamEndEvent(type="stream_end"), dst_ctx):
             yield payload
+
+
+def chunks_to_chat_response(chat_chunks) -> dict:
+    import time
+
+    content = ""
+    reasoning_content = ""
+    tool_calls: list[dict] = []
+    finish_reason = "stop"
+    model = ""
+    resp_id = "chatcmpl-"
+    created = 0
+    prompt_tokens = 0
+    completion_tokens = 0
+    for c in chat_chunks:
+        if not isinstance(c, dict):
+            continue
+        resp_id = c.get("id") or resp_id
+        model = c.get("model") or model
+        if c.get("created"):
+            created = c["created"]
+        usage = c.get("usage")
+        if usage:
+            prompt_tokens = usage.get("prompt_tokens", prompt_tokens)
+            completion_tokens = usage.get("completion_tokens", completion_tokens)
+        for choice in c.get("choices", []):
+            if choice.get("finish_reason"):
+                finish_reason = choice["finish_reason"]
+            delta = choice.get("delta", {})
+            if delta.get("content"):
+                content += delta["content"]
+            if delta.get("reasoning_content"):
+                reasoning_content += delta["reasoning_content"]
+            if delta.get("tool_calls"):
+                for tc in delta["tool_calls"]:
+                    idx = tc.get("index", len(tool_calls))
+                    while len(tool_calls) <= idx:
+                        tool_calls.append({"id": "", "type": "function", "function": {"name": "", "arguments": ""}})
+                    if tc.get("id"):
+                        tool_calls[idx]["id"] = tc["id"]
+                    if tc.get("type"):
+                        tool_calls[idx]["type"] = tc["type"]
+                    fn = tc.get("function", {})
+                    if fn.get("name"):
+                        tool_calls[idx]["function"]["name"] += fn["name"]
+                    if fn.get("arguments"):
+                        tool_calls[idx]["function"]["arguments"] += fn["arguments"]
+    msg: dict = {"role": "assistant", "content": content if (content or not tool_calls) else None}
+    if tool_calls:
+        msg["tool_calls"] = tool_calls
+    if reasoning_content:
+        msg["reasoning_content"] = reasoning_content
+    return {
+        "id": resp_id,
+        "object": "chat.completion",
+        "created": created or int(time.time()),
+        "model": model,
+        "choices": [{"index": 0, "message": msg, "finish_reason": finish_reason}],
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens or len(content.split()),
+            "total_tokens": prompt_tokens + (completion_tokens or len(content.split())),
+        },
+    }
+
+
+def response_to_frontend(frontend: str, chat_chunks) -> dict:
+    accum = chunks_to_chat_response(chat_chunks)
+    if frontend == "chat":
+        return accum
+    target = _converter(frontend)
+    ir = _chat.response_from_provider(accum)
+    return target.response_to_provider(ir)
+

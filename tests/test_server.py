@@ -227,3 +227,61 @@ def test_all_endpoints_down_returns_502_not_broken_200(monkeypatch, fixtures_dir
                           "content": [{"type": "input_text", "text": "hi"}]}], "stream": True})
     assert r.status_code == 502
     assert "down" in r.text.lower() or "error" in r.text.lower()
+
+
+def test_messages_route_anthropic_sse_formatting(client):
+    c, _ = client
+    r = c.post("/v1/messages", json={"model": "gpt-oss-120b",
+                                     "messages": [{"role": "user", "content": "hi"}],
+                                     "stream": True})
+    assert r.status_code == 200
+    assert "text/event-stream" in r.headers.get("content-type", "")
+    assert "event: message_start" in r.text
+    assert "data: " in r.text
+    assert "[DONE]" not in r.text
+
+
+def test_messages_route_non_streaming(client):
+    c, _ = client
+    r = c.post("/v1/messages", json={"model": "gpt-oss-120b",
+                                     "messages": [{"role": "user", "content": "hi"}],
+                                     "stream": False})
+    assert r.status_code == 200
+    assert "application/json" in r.headers.get("content-type", "")
+    j = r.json()
+    assert j["type"] == "message"
+    assert j["role"] == "assistant"
+    assert j["content"][0]["text"] == "hello world"
+
+
+def test_chat_completions_non_streaming(client):
+    c, _ = client
+    r = c.post("/v1/chat/completions", json={"model": "gpt-oss-120b",
+                                             "messages": [{"role": "user", "content": "hi"}],
+                                             "stream": False})
+    assert r.status_code == 200
+    assert "application/json" in r.headers.get("content-type", "")
+    j = r.json()
+    assert j["object"] == "chat.completion"
+    assert j["choices"][0]["message"]["content"] == "hello world"
+
+
+def test_responses_non_streaming(client):
+    c, _ = client
+    r = c.post("/v1/responses", json={"model": "gpt-oss-120b",
+                                      "input": [{"type": "message", "role": "user",
+                                                 "content": [{"type": "input_text", "text": "hi"}]}],
+                                      "stream": False})
+    assert r.status_code == 200
+    assert "application/json" in r.headers.get("content-type", "")
+    j = r.json()
+    assert j["object"] == "response"
+
+
+def test_messages_context_window_suffix_routed(client):
+    c, _ = client
+    r = c.post("/v1/messages", json={"model": "gpt-oss-120b[1m]",
+                                     "messages": [{"role": "user", "content": "hi"}],
+                                     "stream": True})
+    assert r.status_code == 200
+
